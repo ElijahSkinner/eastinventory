@@ -1,10 +1,11 @@
 {
   "expo": {
-    "name": "east-inventory-app",
+    "name": "EAST Initiative Procurement",
     "slug": "east-inventory-app",
     "version": "1.0.0",
+    "entryPoint": "./App.tsx",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/logos/EAST_Logo_2c_vertical.png",
     "scheme": "eastinventoryapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,17 +14,17 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#0093B2",
+        "foregroundImage": "./assets/logos/EAST_Logo_2c_vertical.png",
+        "backgroundImage": "./assets/logos/EAST_Logo_2c_vertical.png",
+        "monochromeImage": "./assets/logos/EAST_Logo_black_vertical.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
