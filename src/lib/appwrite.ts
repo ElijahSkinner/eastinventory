@@ -31,13 +31,14 @@ export interface InventoryItem extends Models.Document {
     barcode: string;
     item_type_id: string;
     serial_number?: string;
-    status?: string;
+    status?: 'available' | 'assigned' | 'staged' | 'installed' | 'maintenance';
     location?: string;
     school_id?: string;
     notes?: string;
     is_school_specific?: boolean;
     received_date?: string;
-    checked_out_date?: string;
+    staged_date?: string;      // ← ADD THIS
+    installed_date?: string;   // ← ADD THIS
 }
 
 export interface School extends Models.Document {
@@ -60,6 +61,7 @@ export interface Transaction extends Models.Document {
     performed_by: string;
     notes?: string;
     transaction_date: string;
+    installation_location?: string;
 }
 
 export interface UserSettings extends Models.Document {

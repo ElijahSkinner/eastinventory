@@ -76,7 +76,7 @@ export default function ScanInScreen() {
 
     const addInventoryItem = async (barcode: string, itemTypeId: string, itemName?: string) => {
         try {
-            await databases.createDocument(
+            const newItem = await databases.createDocument(
                 DATABASE_ID,
                 COLLECTIONS.INVENTORY_ITEMS,
                 ID.unique(),
@@ -89,16 +89,17 @@ export default function ScanInScreen() {
                 }
             );
 
+            // Log transaction - USE THE NEW ITEM ID
             await databases.createDocument(
                 DATABASE_ID,
                 COLLECTIONS.TRANSACTIONS,
                 ID.unique(),
                 {
                     transaction_type: 'received',
-                    inventory_item_id: itemTypeId,
+                    inventory_item_id: newItem.$id,  // ← IMPORTANT: Use newItem.$id, not itemTypeId
                     performed_by: user?.name || 'Unknown',
                     transaction_date: new Date().toISOString(),
-                    notes: `Scanned in via barcode: ${barcode}`,
+                    notes: `Scanned into inventory (barcode: ${barcode})`,
                 }
             );
 
