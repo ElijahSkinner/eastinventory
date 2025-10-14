@@ -16,11 +16,12 @@ export const COLLECTIONS = {
     SCHOOLS: 'schools',
     TRANSACTIONS: 'transactions',
     USER_SETTINGS: 'user_settings',
-    // New Collections
     PURCHASE_ORDERS: 'purchase_orders',
     PO_LINE_ITEMS: 'po_line_items',
     SCHOOL_ORDERS: 'school_orders',
     SCHOOL_ORDER_ITEMS: 'school_order_items',
+    STANDARD_PACKAGE: 'standard_package',
+    SCHOOL_CHECKOUTS: 'school_checkouts',
 } as const;
 
 // Existing Type definitions

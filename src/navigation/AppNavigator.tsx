@@ -15,6 +15,8 @@ import SchoolOrdersScreen from '../screens/SchoolOrdersScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import CreatePurchaseOrderScreen from '../screens/CreatePurchaseOrderScreen';
 import CreateSchoolOrderScreen from '../screens/CreateSchoolOrderScreen';
+import CheckOutScreen from '../screens/CheckOutScreen';
+
 
 export type RootStackParamList = {
     MainTabs: undefined;
@@ -27,7 +29,7 @@ export type TabParamList = {
     PurchaseOrders: undefined;
     Receiving: undefined;
     Inventory: undefined;
-    SchoolOrders: undefined;
+    CheckOut: undefined;
     Settings: undefined;
 };
 
@@ -104,14 +106,15 @@ function MainTabs() {
                 }}
             />
             <Tab.Screen
-                name="SchoolOrders"
-                component={SchoolOrdersScreen}
+                name="CheckOut"
+                component={CheckOutScreen}
                 options={{
-                    title: 'School Orders',
-                    tabBarLabel: 'Schools',
-                    tabBarIcon: ({ color, size }) => <TabIcon icon="🏫" color={color} />,
+                    title: 'Check Out',
+                    tabBarLabel: 'Check Out',
+                    tabBarIcon: ({ color, size }) => <TabIcon icon="📤" color={color} />,
                 }}
             />
+
             <Tab.Screen
                 name="Settings"
                 component={SettingsScreen}
