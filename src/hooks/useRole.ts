@@ -1,8 +1,7 @@
 // src/hooks/useRole.ts
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { databases, DATABASE_ID } from '../lib/appwrite';
-import { Query } from 'appwrite';
+import { account } from '../lib/appwrite';
 
 export type UserRole = 'admin' | 'user';
 
@@ -12,7 +11,12 @@ export function useRole() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        checkAdminStatus();
+        if (user) {
+            checkAdminStatus();
+        } else {
+            setIsAdmin(false);
+            setLoading(false);
+        }
     }, [user]);
 
     const checkAdminStatus = async () => {
@@ -23,32 +27,51 @@ export function useRole() {
         }
 
         try {
-            // Check if user is member of "admin" team
-            // Appwrite stores team memberships, we can check by listing teams
-            const response = await fetch(
-                `${process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT}/teams`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'X-Appwrite-Project': process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID || '',
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
+            console.log('🔍 Checking admin status for user:', user.$id);
+            console.log('📋 User labels:', user.labels);
+
+            // Method 1: Check if user has 'admin' label
+            const hasAdminLabel = user.labels?.includes('admin');
+
+            if (hasAdminLabel) {
+                console.log('✅ User has admin label');
+                setIsAdmin(true);
+                setLoading(false);
+                return;
+            }
+
+            // Method 2: Try to get user's team memberships via prefs
+            try {
+                const prefs = await account.getPrefs();
+                console.log('📋 User prefs:', prefs);
+
+                // Check if there's a teams array in prefs
+                if (prefs.teams && Array.isArray(prefs.teams)) {
+                    const isInAdminTeam = prefs.teams.some(
+                        (teamName: string) => teamName.toLowerCase() === 'admin'
+                    );
+
+                    if (isInAdminTeam) {
+                        console.log('✅ User is in admin team (via prefs)');
+                        setIsAdmin(true);
+                        setLoading(false);
+                        return;
+                    }
                 }
+            } catch (prefsError) {
+                console.log('⚠️ Could not check prefs:', prefsError);
+            }
+
+            // Method 3: Check user labels again for 'admin' (case insensitive)
+            const isAdminByLabel = user.labels?.some(
+                (label: string) => label.toLowerCase() === 'admin'
             );
 
-            if (response.ok) {
-                const data = await response.json();
-                // Check if user is in a team named "admin"
-                const isInAdminTeam = data.teams?.some(
-                    (team: any) => team.name.toLowerCase() === 'admin'
-                );
-                setIsAdmin(isInAdminTeam);
-            } else {
-                setIsAdmin(false);
-            }
+            console.log('👑 Is admin (by label)?', isAdminByLabel);
+            setIsAdmin(isAdminByLabel || false);
+
         } catch (error) {
-            console.error('Error checking admin status:', error);
+            console.error('❌ Error checking admin status:', error);
             setIsAdmin(false);
         } finally {
             setLoading(false);
