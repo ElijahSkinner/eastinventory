@@ -52,7 +52,7 @@ export default function PurchaseOrdersScreen() {
             const queries = [Query.orderDesc('order_date'), Query.limit(100)];
 
             if (filterStatus !== 'all') {
-                queries.push(Query.equal('status', filterStatus));
+                queries.push(Query.equal('order_status', filterStatus));
             }
 
             const response = await databases.listDocuments(
@@ -248,7 +248,7 @@ export default function PurchaseOrdersScreen() {
                 ) : (
                     purchaseOrders.map((po) => {
                         const progress = calculatePOProgress(po);
-                        const statusColor = getStatusColor(po.status);
+                        const statusColor = getStatusColor(po.order_status);
 
                         return (
                             <View key={po.$id} style={styles.poContainer}>
@@ -263,7 +263,7 @@ export default function PurchaseOrdersScreen() {
                                 >
                                     <View style={styles.poHeader}>
                                         <View style={styles.poTitleRow}>
-                                            <Text style={styles.statusIcon}>{getStatusIcon(po.status)}</Text>
+                                            <Text style={styles.statusIcon}>{getStatusIcon(po.order_status)}</Text>
                                             <View style={styles.poInfo}>
                                                 <Text
                                                     style={[
@@ -286,7 +286,7 @@ export default function PurchaseOrdersScreen() {
                                             ]}
                                         >
                                             <Text style={[styles.statusText, { color: statusColor }]}>
-                                                {getStatusLabel(po.status)}
+                                                {getStatusLabel(po.order_status)}
                                             </Text>
                                         </View>
                                     </View>

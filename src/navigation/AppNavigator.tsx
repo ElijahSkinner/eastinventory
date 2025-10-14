@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Colors } from '../theme';
-import { Image } from 'react-native';
+import { Image, Text } from 'react-native'; // Add Text import
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -125,12 +125,12 @@ function MainTabs() {
     );
 }
 
-// Simple text-based icon component
+// Fixed TabIcon component - use Text instead of span
 function TabIcon({ icon, color }: { icon: string; color: string }) {
     return (
-        <span style={{ fontSize: 24, opacity: color === Colors.primary.cyan ? 1 : 0.5 }}>
+        <Text style={{ fontSize: 24, opacity: color === Colors.primary.cyan ? 1 : 0.5 }}>
             {icon}
-        </span>
+        </Text>
     );
 }
 

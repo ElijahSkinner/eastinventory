@@ -136,7 +136,7 @@ export default function CreateSchoolOrderScreen() {
                     school_id: selectedSchoolId,
                     order_number: orderNumber,
                     install_date: installDate,
-                    status: 'planning',
+                    order_status: 'planning',
                     created_by: user?.name || 'Unknown',
                     created_date: new Date().toISOString(),
                     notes: notes.trim() || undefined,

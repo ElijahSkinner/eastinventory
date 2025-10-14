@@ -244,7 +244,7 @@ export default function ReceivingScreen() {
                 {
                     received_items: totalReceived,
                     total_items: totalOrdered,
-                    status: newPOStatus,
+                    order_status: newPOStatus, // CHANGED from status
                 }
             );
 

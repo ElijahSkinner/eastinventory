@@ -67,7 +67,7 @@ export default function SchoolOrdersScreen() {
             const queries = [Query.orderAsc('install_date'), Query.limit(100)];
 
             if (filterStatus !== 'all') {
-                queries.push(Query.equal('status', filterStatus));
+                queries.push(Query.equal('order_status', filterStatus));
             }
 
             const response = await databases.listDocuments(
@@ -164,7 +164,7 @@ export default function SchoolOrdersScreen() {
                 COLLECTIONS.INVENTORY_ITEMS,
                 [
                     Query.equal('item_type_id', orderItem.item_type_id),
-                    Query.equal('status', 'available'),
+                    Query.equal('order_status', 'available'),
                     Query.limit(100),
                 ]
             );
@@ -260,10 +260,10 @@ export default function SchoolOrdersScreen() {
                 0
             ) + selectedItems.length;
 
-            let newStatus: SchoolOrder['status'] = order.status;
+            let newStatus: SchoolOrder['order_status'] = order.order_status;
             if (totalAllocated >= totalNeeded) {
                 newStatus = 'ready';
-            } else if (totalAllocated > 0 && order.status === 'planning') {
+            } else if (totalAllocated > 0 && order.order_status === 'planning') {
                 newStatus = 'receiving';
             }
 
@@ -435,16 +435,16 @@ export default function SchoolOrdersScreen() {
                                         <View
                                             style={[
                                                 styles.statusBadge,
-                                                { backgroundColor: `${getStatusColor(order.status)}20` },
+                                                { backgroundColor: `${getStatusColor(order.order_status)}20` },
                                             ]}
                                         >
                                             <Text
                                                 style={[
                                                     styles.statusText,
-                                                    { color: getStatusColor(order.status) },
+                                                    { color: getStatusColor(order.order_status) },
                                                 ]}
                                             >
-                                                {getStatusLabel(order.status)}
+                                                {getStatusLabel(order.order_status)}
                                             </Text>
                                         </View>
                                     </View>

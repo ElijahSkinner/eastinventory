@@ -129,7 +129,7 @@ export default function CreatePurchaseOrderScreen() {
                     vendor: vendor.trim(),
                     order_date: orderDate,
                     expected_delivery: expectedDelivery || undefined,
-                    status: 'ordered',
+                    order_status: 'ordered',
                     created_by: user?.name || 'Unknown',
                     notes: notes.trim() || undefined,
                     total_items: totalItems,

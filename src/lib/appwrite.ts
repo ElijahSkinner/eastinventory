@@ -88,7 +88,7 @@ export interface PurchaseOrder extends Models.Document {
     vendor: string;
     order_date: string;
     expected_delivery?: string;
-    status: 'ordered' | 'partially_received' | 'fully_received' | 'cancelled';
+    order_status: 'ordered' | 'partially_received' | 'fully_received' | 'cancelled';
     created_by: string;
     notes?: string;
     total_items: number;
@@ -109,7 +109,7 @@ export interface SchoolOrder extends Models.Document {
     school_id: string;
     order_number: string;
     install_date: string;
-    status: 'planning' | 'ordered' | 'receiving' | 'ready' | 'installed' | 'cancelled';
+    order_status: 'planning' | 'ordered' | 'receiving' | 'ready' | 'installed' | 'cancelled';
     created_by: string;
     created_date: string;
     notes?: string;
@@ -138,8 +138,8 @@ export function calculateSchoolOrderProgress(order: SchoolOrder): number {
 }
 
 // Helper function to get status color
-export function getStatusColor(status: string): string {
-    switch (status) {
+export function getStatusColor(order_status: string): string {
+    switch (order_status) {
         case 'ordered':
         case 'planning':
             return '#005587'; // blue
@@ -158,8 +158,8 @@ export function getStatusColor(status: string): string {
 }
 
 // Helper function to get status icon
-export function getStatusIcon(status: string): string {
-    switch (status) {
+export function getStatusIcon(order_status: string): string {
+    switch (order_status) {
         case 'ordered':
         case 'planning':
             return '📋';
