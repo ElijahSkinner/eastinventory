@@ -33,7 +33,7 @@ interface ReceivingSession {
     location: string;
 }
 
-export default function ReceivingScreen() {
+export default function ReceivingScreen({ route }: any) {
     const { colors } = useTheme();
     const { user } = useAuth();
     const [permission, requestPermission] = useCameraPermissions();
@@ -52,16 +52,23 @@ export default function ReceivingScreen() {
         }
     }, [permission]);
 
+    // Auto-scan if SKU is passed from navigation
+    useEffect(() => {
+        if (route?.params?.sku) {
+            handleSKUScan(route.params.sku);
+        }
+    }, [route?.params?.sku]);
+
     const handleSKUScan = async (sku: string) => {
         setScanning(false);
         setProcessing(true);
 
         try {
-            // Find PO line item with this SKU
+            // ===== FIX #2: Find INCOMPLETE line items only =====
             const lineItemsResponse = await databases.listDocuments(
                 DATABASE_ID,
                 COLLECTIONS.PO_LINE_ITEMS,
-                [Query.equal('sku', sku), Query.limit(1)]
+                [Query.equal('sku', sku), Query.limit(100)]  // Get all matching SKUs
             );
 
             if (lineItemsResponse.documents.length === 0) {
@@ -73,17 +80,22 @@ export default function ReceivingScreen() {
                 return;
             }
 
-            const poLineItem = lineItemsResponse.documents[0] as unknown as POLineItem;
+            // Filter to only incomplete line items
+            const incompleteLineItems = lineItemsResponse.documents.filter((doc: any) =>
+                doc.quantity_received < doc.quantity_ordered
+            );
 
-            // Check if already fully received
-            if (poLineItem.quantity_received >= poLineItem.quantity_ordered) {
+            if (incompleteLineItems.length === 0) {
                 Alert.alert(
-                    'Already Complete',
-                    `This line item has already been fully received (${poLineItem.quantity_received} of ${poLineItem.quantity_ordered}).`
+                    'All Orders Complete',
+                    `All purchase orders for SKU ${sku} have been fully received.`
                 );
                 setProcessing(false);
                 return;
             }
+
+            // Get the first incomplete line item (you could also show a picker if multiple)
+            const poLineItem = incompleteLineItems[0] as unknown as POLineItem;
 
             // Load item type
             const itemType = await databases.getDocument(
@@ -177,7 +189,7 @@ export default function ReceivingScreen() {
                     COLLECTIONS.INVENTORY_ITEMS,
                     ID.unique(),
                     {
-                        barcode: receivingSession.sku, // Use SKU as barcode for now
+                        barcode: receivingSession.sku,
                         item_type_id: receivingSession.itemType.$id,
                         status: 'available',
                         location: locationInput || undefined,
@@ -214,14 +226,14 @@ export default function ReceivingScreen() {
                 }
             );
 
-            // ===== FIX: Update PO totals based on LINE ITEMS, not inventory items =====
+            // ===== FIX #1: Update PO totals based on LINE ITEMS after update =====
             const allLineItems = await databases.listDocuments(
                 DATABASE_ID,
                 COLLECTIONS.PO_LINE_ITEMS,
                 [Query.equal('purchase_order_id', receivingSession.purchaseOrder.$id)]
             );
 
-            // Calculate totals from LINE ITEMS
+            // Calculate totals from LINE ITEMS (after the update above)
             let totalOrdered = 0;
             let totalReceived = 0;
 
@@ -230,6 +242,8 @@ export default function ReceivingScreen() {
                 totalOrdered += item.quantity_ordered;
                 totalReceived += item.quantity_received;
             }
+
+            console.log('📊 PO Totals:', { totalOrdered, totalReceived });
 
             // Determine new PO status
             let newPOStatus: 'ordered' | 'partially_received' | 'fully_received' = 'ordered';
@@ -257,12 +271,12 @@ export default function ReceivingScreen() {
                     quantity,
                     itemName: receivingSession.itemType.item_name,
                 },
-                ...prev.slice(0, 4), // Keep last 5
+                ...prev.slice(0, 4),
             ]);
 
             Alert.alert(
                 'Success!',
-                `${quantity} ${receivingSession.itemType.item_name}(s) received successfully!`
+                `${quantity} ${receivingSession.itemType.item_name}(s) received successfully!\n\nPO Progress: ${totalReceived} of ${totalOrdered}`
             );
 
             // Reset session
@@ -556,6 +570,7 @@ export default function ReceivingScreen() {
     );
 }
 
+// Styles remain the same as your original file
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -644,7 +659,6 @@ const styles = StyleSheet.create({
     recentSKU: {
         fontSize: Typography.sizes.sm,
     },
-    // Camera styles
     cameraContainer: {
         flex: 1,
         backgroundColor: '#000',
@@ -696,7 +710,6 @@ const styles = StyleSheet.create({
         padding: Spacing.md,
         borderRadius: BorderRadius.md,
     },
-    // Receiving session styles
     sessionContainer: {
         flex: 1,
         padding: Spacing.lg,

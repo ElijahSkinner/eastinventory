@@ -27,7 +27,7 @@ export type RootStackParamList = {
 export type TabParamList = {
     Dashboard: undefined;
     PurchaseOrders: undefined;
-    Receiving: undefined;
+    Receiving: { sku?: string } | undefined;
     Inventory: undefined;
     CheckOut: undefined;
     Settings: undefined;

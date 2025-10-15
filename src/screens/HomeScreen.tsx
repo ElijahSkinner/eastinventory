@@ -1,5 +1,6 @@
 // src/screens/HomeScreen.tsx (Enhanced)
-import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
@@ -33,9 +34,11 @@ export default function HomeScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        loadDashboardStats();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadDashboardStats();
+        }, [])
+    );
 
     const loadDashboardStats = async () => {
         try {

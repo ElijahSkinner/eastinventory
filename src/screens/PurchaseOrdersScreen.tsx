@@ -1,5 +1,6 @@
 // src/screens/PurchaseOrdersScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -26,11 +27,19 @@ import {
 } from '../lib/appwrite';
 import { Query } from 'appwrite';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { TabParamList, RootStackParamList } from '../navigation/AppNavigator';
 
 export default function PurchaseOrdersScreen() {
     const { colors } = useTheme();
     const { isAdmin } = useRole();
-    const navigation = useNavigation();
+    type PurchaseOrdersNavigationProp = CompositeNavigationProp<
+        BottomTabNavigationProp<TabParamList, 'PurchaseOrders'>,
+        NativeStackNavigationProp<RootStackParamList>
+    >;
+    const navigation = useNavigation<PurchaseOrdersNavigationProp>();
 
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
     const [expandedPOId, setExpandedPOId] = useState<string | null>(null);
@@ -41,9 +50,11 @@ export default function PurchaseOrdersScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('all');
 
-    useEffect(() => {
-        loadPurchaseOrders();
-    }, [filterStatus]);
+    useFocusEffect(
+        useCallback(() => {
+            loadPurchaseOrders();
+        }, [filterStatus, searchQuery])
+    );
 
     const loadPurchaseOrders = async () => {
         try {
@@ -166,7 +177,9 @@ export default function PurchaseOrdersScreen() {
             </View>
         );
     }
-
+    type PurchaseOrdersScreenProps = {
+        navigation: BottomTabNavigationProp<TabParamList, 'PurchaseOrders'>;
+    };
     return (
         <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
             {/* Header with Admin Badge */}
@@ -404,8 +417,8 @@ export default function PurchaseOrdersScreen() {
                                                                     { backgroundColor: colors.primary.cyan },
                                                                 ]}
                                                                 onPress={() => {
-                                                                    // Navigate to receiving screen with this SKU
-                                                                    // We'll implement this in the Receiving screen
+                                                                    // Now TypeScript knows about the Receiving route and its params
+                                                                    navigation.navigate('Receiving', { sku: lineItem.sku });
                                                                 }}
                                                             >
                                                                 <Text style={styles.receiveButtonText}>
