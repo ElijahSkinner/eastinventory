@@ -86,7 +86,7 @@ export default function HomeScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-
+    };
     const handleRefresh = () => {
         setRefreshing(true);
         loadDashboardStats();
@@ -405,4 +405,4 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontStyle: 'italic',
     },
-});}
+});

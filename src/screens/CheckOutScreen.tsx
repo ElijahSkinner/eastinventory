@@ -157,7 +157,7 @@ export default function CheckOutScreen() {
     };
 
     const loadCheckoutProgress = async () => {
-        if (!selectedSchool) return;
+        if (!selectedSchool) return; // This guard is already there
 
         try {
             // Find or create checkout session
@@ -232,7 +232,14 @@ export default function CheckOutScreen() {
         }
     };
 
+
     const handleBarcodeScanned = async ({ data }: { data: string }) => {
+        // Add null checks at the beginning
+        if (!selectedSchool || !currentCheckoutId) {
+            Alert.alert('Error', 'No active checkout session. Please select a school first.');
+            return;
+        }
+
         // Prevent rapid scanning
         if (scanCooldown || processing) return;
 
@@ -295,7 +302,7 @@ export default function CheckOutScreen() {
                 {
                     status: 'assigned',
                     school_id: selectedSchool.$id,
-                    checkout_id: currentCheckoutId,
+                    checkout_id: currentCheckoutId, // Now safe because we checked at the start
                 }
             );
 
@@ -313,11 +320,16 @@ export default function CheckOutScreen() {
                 }
             );
 
-            const checkout = await databases.getDocument(DATABASE_ID, COLLECTIONS.SCHOOL_CHECKOUTS, currentCheckoutId);
+            const checkout = await databases.getDocument(
+                DATABASE_ID,
+                COLLECTIONS.SCHOOL_CHECKOUTS,
+                currentCheckoutId // Now safe
+            );
+
             await databases.updateDocument(
                 DATABASE_ID,
                 COLLECTIONS.SCHOOL_CHECKOUTS,
-                currentCheckoutId,
+                currentCheckoutId, // Now safe
                 {
                     total_items_checked_out: (checkout.total_items_checked_out || 0) + 1,
                 }
@@ -335,6 +347,7 @@ export default function CheckOutScreen() {
             setProcessing(false);
         }
     };
+
 
     const handleResumeCheckout = (checkout: ActiveCheckout) => {
         if (checkout.school) {
@@ -807,40 +820,42 @@ export default function CheckOutScreen() {
                     >
                         <View style={styles.cameraOverlay}>
                             {/* School Header */}
-                            <View style={[styles.schoolHeader, { backgroundColor: 'rgba(0, 147, 178, 0.95)' }]}>
-                                <View style={styles.schoolHeaderContent}>
-                                    <Text style={styles.schoolHeaderText}>
-                                        🏫 {selectedSchool.school_name}
-                                    </Text>
-                                    <TouchableOpacity
-                                        style={styles.changeSchoolButton}
-                                        onPress={() => {
-                                            setSelectedSchool(null);
-                                            setScanning(false);
-                                        }}
-                                    >
-                                        <Text style={styles.changeSchoolText}>Change</Text>
-                                    </TouchableOpacity>
-                                </View>
-
-                                {/* Progress Bar */}
-                                <View style={styles.progressBarContainer}>
-                                    <View style={styles.progressBarBg}>
-                                        <View
-                                            style={[
-                                                styles.progressBarFill,
-                                                {
-                                                    width: `${progress.percentage}%`,
-                                                    backgroundColor: progress.percentage === 100 ? '#27ae60' : '#fff',
-                                                },
-                                            ]}
-                                        />
+                            {selectedSchool && ( // Add this null check
+                                <View style={[styles.schoolHeader, { backgroundColor: 'rgba(0, 147, 178, 0.95)' }]}>
+                                    <View style={styles.schoolHeaderContent}>
+                                        <Text style={styles.schoolHeaderText}>
+                                            🏫 {selectedSchool.school_name}
+                                        </Text>
+                                        <TouchableOpacity
+                                            style={styles.changeSchoolButton}
+                                            onPress={() => {
+                                                setSelectedSchool(null);
+                                                setScanning(false);
+                                            }}
+                                        >
+                                            <Text style={styles.changeSchoolText}>Change</Text>
+                                        </TouchableOpacity>
                                     </View>
-                                    <Text style={styles.progressText}>
-                                        {progress.totalCheckedOut} / {progress.totalNeeded} ({progress.percentage}%)
-                                    </Text>
+
+                                    {/* Progress Bar */}
+                                    <View style={styles.progressBarContainer}>
+                                        <View style={styles.progressBarBg}>
+                                            <View
+                                                style={[
+                                                    styles.progressBarFill,
+                                                    {
+                                                        width: `${progress.percentage}%`,
+                                                        backgroundColor: progress.percentage === 100 ? '#27ae60' : '#fff',
+                                                    },
+                                                ]}
+                                            />
+                                        </View>
+                                        <Text style={styles.progressText}>
+                                            {progress.totalCheckedOut} / {progress.totalNeeded} ({progress.percentage}%)
+                                        </Text>
+                                    </View>
                                 </View>
-                            </View>
+                            )}
 
                             {/* Scan Frame */}
                             <View style={[styles.scanFrame, { borderColor: colors.primary.cyan }]} />

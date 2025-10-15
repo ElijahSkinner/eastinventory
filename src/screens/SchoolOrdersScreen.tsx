@@ -274,7 +274,7 @@ export default function SchoolOrdersScreen() {
                 {
                     allocated_items: totalAllocated,
                     total_items: totalNeeded,
-                    status: newStatus,
+                    order_status: newStatus,
                 }
             );
 

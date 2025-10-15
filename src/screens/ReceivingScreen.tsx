@@ -214,22 +214,24 @@ export default function ReceivingScreen() {
                 }
             );
 
-            // Update PO totals
+            // ===== FIX: Update PO totals based on LINE ITEMS, not inventory items =====
             const allLineItems = await databases.listDocuments(
                 DATABASE_ID,
                 COLLECTIONS.PO_LINE_ITEMS,
                 [Query.equal('purchase_order_id', receivingSession.purchaseOrder.$id)]
             );
 
-            const totalOrdered = allLineItems.documents.reduce(
-                (sum, item: any) => sum + item.quantity_ordered,
-                0
-            );
-            const totalReceived = allLineItems.documents.reduce(
-                (sum, item: any) => sum + item.quantity_received,
-                0
-            ) + quantity;
+            // Calculate totals from LINE ITEMS
+            let totalOrdered = 0;
+            let totalReceived = 0;
 
+            for (const lineItem of allLineItems.documents) {
+                const item = lineItem as any;
+                totalOrdered += item.quantity_ordered;
+                totalReceived += item.quantity_received;
+            }
+
+            // Determine new PO status
             let newPOStatus: 'ordered' | 'partially_received' | 'fully_received' = 'ordered';
             if (totalReceived >= totalOrdered) {
                 newPOStatus = 'fully_received';
@@ -244,7 +246,7 @@ export default function ReceivingScreen() {
                 {
                     received_items: totalReceived,
                     total_items: totalOrdered,
-                    order_status: newPOStatus, // CHANGED from status
+                    order_status: newPOStatus,
                 }
             );
 
