@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>EAST - Setup Standard Package</title>
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -83,57 +84,98 @@
             border-radius: 4px;
             margin-bottom: 20px;
         }
+        #loginScreen {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+        #mainApp {
+            display: none;
+        }
+        .user-info {
+            text-align: right;
+            margin-bottom: 10px;
+        }
+        .logout-btn {
+            background: #e74c3c;
+            font-size: 14px;
+            padding: 5px 15px;
+        }
     </style>
 </head>
 <body>
-<div class="header">
-    <h1>🏫 EAST Standard School Package Setup</h1>
-    <p>Define what items every school receives</p>
+<!-- Login Screen -->
+<div id="loginScreen">
+    <div class="card">
+        <h2>Login to EAST Admin</h2>
+        <div id="loginMessage"></div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword">
+        </div>
+        <button onclick="login()">Login</button>
+    </div>
 </div>
 
-<div id="message"></div>
+<!-- Main App -->
+<div id="mainApp">
+    <div class="user-info">
+        Logged in as: <strong id="userName"></strong>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
 
-<!-- Add Item Form -->
-<div class="card">
-    <h2>Add Item to Standard Package</h2>
-    <div class="form-group">
-        <label>Item Type</label>
-        <select id="itemTypeSelect">
-            <option value="">Loading...</option>
-        </select>
+    <div class="header">
+        <h1>🏫 EAST Standard School Package Setup</h1>
+        <p>Define what items every school receives</p>
     </div>
-    <div class="form-group">
-        <label>Quantity per School</label>
-        <input type="number" id="quantity" min="1" value="1">
-    </div>
-    <div class="form-group">
-        <label>Notes (optional)</label>
-        <input type="text" id="notes" placeholder="e.g., One per classroom">
-    </div>
-    <button onclick="addToPackage()">Add to Package</button>
-</div>
 
-<!-- Current Package -->
-<div class="card">
-    <h2>Current Standard Package</h2>
-    <table id="packageTable">
-        <thead>
-        <tr>
-            <th>Item Name</th>
-            <th>Category</th>
-            <th>Quantity</th>
-            <th>Notes</th>
-            <th>Action</th>
-        </tr>
-        </thead>
-        <tbody id="packageBody">
-        <tr>
-            <td colspan="5">Loading...</td>
-        </tr>
-        </tbody>
-    </table>
-    <div style="margin-top: 20px; padding: 15px; background: #e8f8ff; border-radius: 4px;">
-        <strong>Total items per school: <span id="totalItems">0</span></strong>
+    <div id="message"></div>
+
+    <!-- Add Item Form -->
+    <div class="card">
+        <h2>Add Item to Standard Package</h2>
+        <div class="form-group">
+            <label>Item Type</label>
+            <select id="itemTypeSelect">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Quantity per School</label>
+            <input type="number" id="quantity" min="1" value="1">
+        </div>
+        <div class="form-group">
+            <label>Notes (optional)</label>
+            <input type="text" id="notes" placeholder="e.g., One per classroom">
+        </div>
+        <button onclick="addToPackage()">Add to Package</button>
+    </div>
+
+    <!-- Current Package -->
+    <div class="card">
+        <h2>Current Standard Package</h2>
+        <table id="packageTable">
+            <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Notes</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody id="packageBody">
+            <tr>
+                <td colspan="5">Loading...</td>
+            </tr>
+            </tbody>
+        </table>
+        <div style="margin-top: 20px; padding: 15px; background: #e8f8ff; border-radius: 4px;">
+            <strong>Total items per school: <span id="totalItems">0</span></strong>
+        </div>
     </div>
 </div>
 
@@ -142,28 +184,91 @@
     const PROJECT_ID = 'east-inventory';
     const DATABASE_ID = 'inventory_db';
 
+    // Initialize Appwrite
+    const client = new Appwrite.Client()
+        .setEndpoint(ENDPOINT)
+        .setProject(PROJECT_ID);
+
+    const account = new Appwrite.Account(client);
+    const databases = new Appwrite.Databases(client);
+
     let itemTypes = [];
     let standardPackage = [];
+    let currentUser = null;
 
-    async function makeRequest(method, path, body = null) {
-        const options = {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Appwrite-Project': PROJECT_ID,
-            }
-        };
-        if (body) options.body = JSON.stringify(body);
+    // Check if user is already logged in
+    async function checkAuth() {
+        try {
+            currentUser = await account.get();
+            showMainApp();
+            await loadData();
+        } catch (error) {
+            showLoginScreen();
+        }
+    }
 
-        const response = await fetch(`${ENDPOINT}${path}`, options);
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || response.statusText);
-        return data;
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+
+        if (!email || !password) {
+            showLoginMessage('Please enter email and password', 'error');
+            return;
+        }
+
+        try {
+            await account.createEmailPasswordSession(email, password);
+            currentUser = await account.get();
+            showMainApp();
+            await loadData();
+        } catch (error) {
+            showLoginMessage('Login failed: ' + error.message, 'error');
+        }
+    }
+
+    async function logout() {
+        try {
+            await account.deleteSession('current');
+            currentUser = null;
+            showLoginScreen();
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+
+    function showLoginScreen() {
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+    }
+
+    function showMainApp() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userName').textContent = currentUser?.name || currentUser?.email || 'User';
+    }
+
+    function showLoginMessage(text, type) {
+        const div = document.getElementById('loginMessage');
+        div.className = type;
+        div.textContent = text;
+        setTimeout(() => {
+            div.textContent = '';
+            div.className = '';
+        }, 5000);
+    }
+
+    async function loadData() {
+        await loadItemTypes();
+        await loadStandardPackage();
     }
 
     async function loadItemTypes() {
         try {
-            const response = await makeRequest('GET', `/databases/${DATABASE_ID}/collections/item_types/documents?limit=500`);
+            const response = await databases.listDocuments(
+                DATABASE_ID,
+                'item_types',
+                [Appwrite.Query.limit(500)]
+            );
             itemTypes = response.documents;
 
             const select = document.getElementById('itemTypeSelect');
@@ -178,7 +283,11 @@
 
     async function loadStandardPackage() {
         try {
-            const response = await makeRequest('GET', `/databases/${DATABASE_ID}/collections/standard_package/documents?limit=500`);
+            const response = await databases.listDocuments(
+                DATABASE_ID,
+                'standard_package',
+                [Appwrite.Query.limit(500)]
+            );
             standardPackage = response.documents;
 
             const tbody = document.getElementById('packageBody');
@@ -232,30 +341,29 @@
         }
 
         try {
-            // Check if item already exists in package
             const existing = standardPackage.find(p => p.item_type_id === itemTypeId);
             if (existing) {
                 showMessage('This item is already in the package. Delete it first to change the quantity.', 'error');
                 return;
             }
 
-            await makeRequest('POST', `/databases/${DATABASE_ID}/collections/standard_package/documents`, {
-                documentId: 'unique()',
-                data: {
+            await databases.createDocument(
+                DATABASE_ID,
+                'standard_package',
+                Appwrite.ID.unique(),
+                {
                     item_type_id: itemTypeId,
                     quantity: quantity,
                     notes: notes || undefined,
                 }
-            });
+            );
 
             showMessage('Item added to standard package!', 'success');
 
-            // Reset form
             document.getElementById('itemTypeSelect').value = '';
             document.getElementById('quantity').value = '1';
             document.getElementById('notes').value = '';
 
-            // Reload package
             await loadStandardPackage();
         } catch (error) {
             showMessage('Error adding item: ' + error.message, 'error');
@@ -266,7 +374,11 @@
         if (!confirm('Remove this item from the standard package?')) return;
 
         try {
-            await makeRequest('DELETE', `/databases/${DATABASE_ID}/collections/standard_package/documents/${docId}`);
+            await databases.deleteDocument(
+                DATABASE_ID,
+                'standard_package',
+                docId
+            );
             showMessage('Item removed from package', 'success');
             await loadStandardPackage();
         } catch (error) {
@@ -284,13 +396,8 @@
         }, 5000);
     }
 
-    // Load data on page load
-    async function init() {
-        await loadItemTypes();
-        await loadStandardPackage();
-    }
-
-    init();
+    // Initialize on page load
+    checkAuth();
 </script>
 </body>
 </html>

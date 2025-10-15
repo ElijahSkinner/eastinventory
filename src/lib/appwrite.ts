@@ -26,13 +26,18 @@ export const COLLECTIONS = {
 
 // Existing Type definitions
 export interface ItemType extends Models.Document {
+    $id: string;
+    $createdAt: string;
+    $updatedAt: string;
     barcode: string;
     item_name: string;
     category: string;
     description?: string;
     manufacturer?: string;
     model?: string;
+    default_sku?: string; // Add this line
 }
+
 
 export interface InventoryItem extends Models.Document {
     barcode: string;

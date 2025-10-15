@@ -9,6 +9,8 @@ import {
     ScrollView,
     Alert,
     ActivityIndicator,
+    Modal,
+    Pressable,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -41,9 +43,11 @@ export default function CreatePurchaseOrderScreen() {
 
     // For adding new line item
     const [showAddLineItem, setShowAddLineItem] = useState(false);
+    const [showItemTypePicker, setShowItemTypePicker] = useState(false);
     const [selectedItemType, setSelectedItemType] = useState('');
     const [newSKU, setNewSKU] = useState('');
     const [newQuantity, setNewQuantity] = useState('');
+    const [itemTypeSearch, setItemTypeSearch] = useState('');
 
     useEffect(() => {
         loadItemTypes();
@@ -63,6 +67,13 @@ export default function CreatePurchaseOrderScreen() {
             setLoading(false);
         }
     };
+
+    // Filter item types based on search
+    const filteredItemTypes = itemTypes.filter(type =>
+        type.item_name.toLowerCase().includes(itemTypeSearch.toLowerCase()) ||
+        type.category.toLowerCase().includes(itemTypeSearch.toLowerCase()) ||
+        (type.manufacturer && type.manufacturer.toLowerCase().includes(itemTypeSearch.toLowerCase()))
+    );
 
     const handleAddLineItem = () => {
         if (!selectedItemType || !newSKU.trim() || !newQuantity.trim()) {
@@ -92,6 +103,7 @@ export default function CreatePurchaseOrderScreen() {
         setSelectedItemType('');
         setNewSKU('');
         setNewQuantity('');
+        setItemTypeSearch('');
     };
 
     const handleRemoveLineItem = (id: string) => {
@@ -131,7 +143,6 @@ export default function CreatePurchaseOrderScreen() {
                     expected_delivery: expectedDelivery || undefined,
                     order_status: 'ordered',
                     created_by: user?.name || 'Unknown',
-                    notes: notes.trim() || undefined,
                     total_items: totalItems,
                     received_items: 0,
                 }
@@ -164,6 +175,11 @@ export default function CreatePurchaseOrderScreen() {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const getSelectedItemTypeName = () => {
+        const itemType = itemTypes.find(it => it.$id === selectedItemType);
+        return itemType ? itemType.item_name : 'Select item type...';
     };
 
     if (loading) {
@@ -328,39 +344,30 @@ export default function CreatePurchaseOrderScreen() {
                             <Text style={[styles.label, { color: colors.text.primary }]}>
                                 Item Type *
                             </Text>
-                            <ScrollView
+                            <TouchableOpacity
                                 style={[
-                                    styles.itemTypePicker,
-                                    { backgroundColor: colors.background.primary, borderColor: colors.ui.border },
+                                    styles.pickerButton,
+                                    {
+                                        backgroundColor: colors.background.primary,
+                                        borderColor: colors.ui.border,
+                                    },
                                 ]}
+                                onPress={() => setShowItemTypePicker(true)}
                             >
-                                {itemTypes.map(itemType => (
-                                    <TouchableOpacity
-                                        key={itemType.$id}
-                                        style={[
-                                            styles.itemTypeOption,
-                                            selectedItemType === itemType.$id && {
-                                                backgroundColor: `${colors.primary.cyan}20`,
-                                            },
-                                            { borderBottomColor: colors.ui.divider },
-                                        ]}
-                                        onPress={() => {
-                                            setSelectedItemType(itemType.$id);
-                                            // Auto-fill SKU with barcode if available
-                                            if (itemType.barcode) {
-                                                setNewSKU(itemType.barcode);
-                                            }
-                                        }}
-                                    >
-                                        <Text style={[styles.itemTypeName, { color: colors.text.primary }]}>
-                                            {itemType.item_name}
-                                        </Text>
-                                        <Text style={[styles.itemTypeCategory, { color: colors.text.secondary }]}>
-                                            {itemType.category}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
+                                <Text
+                                    style={[
+                                        styles.pickerButtonText,
+                                        {
+                                            color: selectedItemType
+                                                ? colors.text.primary
+                                                : colors.text.secondary,
+                                        },
+                                    ]}
+                                >
+                                    {getSelectedItemTypeName()}
+                                </Text>
+                                <Text style={[styles.pickerArrow, { color: colors.text.secondary }]}>›</Text>
+                            </TouchableOpacity>
 
                             <Text style={[styles.label, { color: colors.text.primary }]}>
                                 SKU *
@@ -410,6 +417,7 @@ export default function CreatePurchaseOrderScreen() {
                                         setSelectedItemType('');
                                         setNewSKU('');
                                         setNewQuantity('');
+                                        setItemTypeSearch('');
                                     }}
                                 >
                                     <Text style={[styles.formButtonText, { color: colors.text.primary }]}>
@@ -442,6 +450,82 @@ export default function CreatePurchaseOrderScreen() {
                     </View>
                 )}
             </ScrollView>
+
+            {/* Item Type Picker Modal */}
+            <Modal visible={showItemTypePicker} transparent animationType="slide">
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => setShowItemTypePicker(false)}
+                >
+                    <Pressable
+                        style={[styles.modalContainer, { backgroundColor: colors.background.primary }]}
+                        onPress={(e) => e.stopPropagation()}
+                    >
+                        <View style={[styles.modalHeader, { borderBottomColor: colors.ui.border }]}>
+                            <Text style={[styles.modalTitle, { color: colors.primary.coolGray }]}>
+                                Select Item Type
+                            </Text>
+                            <TouchableOpacity onPress={() => {
+                                setShowItemTypePicker(false);
+                                setItemTypeSearch('');
+                            }}>
+                                <Text style={[styles.closeButton, { color: colors.text.secondary }]}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Search box */}
+                        <View style={styles.searchContainer}>
+                            <TextInput
+                                style={[styles.searchInput, {
+                                    backgroundColor: colors.background.secondary,
+                                    color: colors.text.primary,
+                                    borderColor: colors.ui.border
+                                }]}
+                                placeholder="Search item types..."
+                                placeholderTextColor={colors.text.secondary}
+                                value={itemTypeSearch}
+                                onChangeText={setItemTypeSearch}
+                                autoCapitalize="none"
+                            />
+                        </View>
+
+                        {/* Scrollable list */}
+                        <ScrollView
+                            style={styles.modalContent}
+                            nestedScrollEnabled={true}
+                            showsVerticalScrollIndicator={true}
+                        >
+                            {filteredItemTypes.map((type) => (
+                                <TouchableOpacity
+                                    key={type.$id}
+                                    style={[styles.itemTypeOption, { borderBottomColor: colors.ui.divider }]}
+                                    onPress={() => {
+                                        setSelectedItemType(type.$id);
+                                        // Auto-fill SKU if available
+                                        if (type.default_sku) {
+                                            setNewSKU(type.default_sku);
+                                        }
+                                        setShowItemTypePicker(false);
+                                        setItemTypeSearch('');
+                                    }}
+                                >
+                                    <View style={styles.itemTypeInfo}>
+                                        <Text style={[styles.itemTypeName, { color: colors.text.primary }]}>
+                                            {type.item_name}
+                                        </Text>
+                                        <Text style={[styles.itemTypeCategory, { color: colors.text.secondary }]}>
+                                            {type.category} {type.manufacturer && `• ${type.manufacturer}`}
+                                        </Text>
+                                    </View>
+                                    {selectedItemType === type.$id && (
+                                        <Text style={[styles.checkmark, { color: colors.primary.cyan }]}>✓</Text>
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </Pressable>
+                </Pressable>
+            </Modal>
 
             {/* Submit Button */}
             <View style={[styles.footer, { backgroundColor: colors.background.primary, borderTopColor: colors.ui.border }]}>
@@ -565,23 +649,20 @@ const styles = StyleSheet.create({
         fontWeight: Typography.weights.bold,
         marginBottom: Spacing.md,
     },
-    itemTypePicker: {
-        maxHeight: 150,
+    pickerButton: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         borderWidth: 1,
         borderRadius: BorderRadius.md,
-        marginBottom: Spacing.md,
-    },
-    itemTypeOption: {
         padding: Spacing.md,
-        borderBottomWidth: 1,
     },
-    itemTypeName: {
+    pickerButtonText: {
         fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.semibold,
+        flex: 1,
     },
-    itemTypeCategory: {
-        fontSize: Typography.sizes.sm,
-        marginTop: Spacing.xs / 2,
+    pickerArrow: {
+        fontSize: 24,
     },
     formButtons: {
         flexDirection: 'row',
@@ -627,5 +708,65 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.5,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContainer: {
+        height: '80%',
+        borderTopLeftRadius: BorderRadius.xl,
+        borderTopRightRadius: BorderRadius.xl,
+        ...Shadows.lg,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: Spacing.lg,
+        borderBottomWidth: 1,
+    },
+    modalTitle: {
+        fontSize: Typography.sizes.xl,
+        fontWeight: Typography.weights.bold,
+    },
+    closeButton: {
+        fontSize: 24,
+    },
+    searchContainer: {
+        padding: Spacing.md,
+        paddingBottom: 0,
+    },
+    searchInput: {
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+        fontSize: Typography.sizes.md,
+    },
+    modalContent: {
+        flex: 1,
+    },
+    itemTypeOption: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: Spacing.lg,
+        borderBottomWidth: 1,
+    },
+    itemTypeInfo: {
+        flex: 1,
+    },
+    itemTypeName: {
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.semibold,
+        marginBottom: Spacing.xs / 2,
+    },
+    itemTypeCategory: {
+        fontSize: Typography.sizes.sm,
+    },
+    checkmark: {
+        fontSize: 24,
+        marginLeft: Spacing.md,
     },
 });

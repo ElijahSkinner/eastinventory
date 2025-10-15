@@ -41,22 +41,20 @@ export default function HomeScreen() {
         try {
             setLoading(true);
 
-            // Load all stats in parallel
             const [
                 posOrdered,
                 posPartiallyReceived,
                 inventoryTotal,
                 inventoryAvailable,
                 inventoryAssigned,
-                schoolOrdersPlanning,
-                schoolOrdersReceiving,
+                schoolCheckoutsInProgress,
             ] = await Promise.all([
                 databases.listDocuments(DATABASE_ID, COLLECTIONS.PURCHASE_ORDERS, [
-                    Query.equal('status', 'ordered'),
+                    Query.equal('order_status', 'ordered'),
                     Query.limit(1),
                 ]),
                 databases.listDocuments(DATABASE_ID, COLLECTIONS.PURCHASE_ORDERS, [
-                    Query.equal('status', 'partially_received'),
+                    Query.equal('order_status', 'partially_received'),
                     Query.limit(1),
                 ]),
                 databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [Query.limit(1)]),
@@ -68,12 +66,8 @@ export default function HomeScreen() {
                     Query.equal('status', 'assigned'),
                     Query.limit(1),
                 ]),
-                databases.listDocuments(DATABASE_ID, COLLECTIONS.SCHOOL_ORDERS, [
-                    Query.equal('status', 'planning'),
-                    Query.limit(1),
-                ]),
-                databases.listDocuments(DATABASE_ID, COLLECTIONS.SCHOOL_ORDERS, [
-                    Query.equal('status', 'receiving'),
+                databases.listDocuments(DATABASE_ID, COLLECTIONS.SCHOOL_CHECKOUTS, [
+                    Query.equal('checkout_status', 'in_progress'),
                     Query.limit(1),
                 ]),
             ]);
@@ -82,7 +76,7 @@ export default function HomeScreen() {
                 posInProgress: posOrdered.total + posPartiallyReceived.total,
                 itemsReceiving: posPartiallyReceived.total,
                 totalInventory: inventoryTotal.total,
-                schoolsPendingPrep: schoolOrdersPlanning.total + schoolOrdersReceiving.total,
+                schoolsPendingPrep: schoolCheckoutsInProgress.total,
                 availableItems: inventoryAvailable.total,
                 assignedItems: inventoryAssigned.total,
             });
@@ -92,7 +86,6 @@ export default function HomeScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
 
     const handleRefresh = () => {
         setRefreshing(true);
@@ -125,10 +118,10 @@ export default function HomeScreen() {
             badge: stats.availableItems > 0 ? stats.availableItems : undefined,
         },
         {
-            title: 'School Orders',
-            description: 'Manage school installations',
-            icon: '🏫',
-            route: 'SchoolOrders' as const,
+            title: 'Check Out Items',
+            description: 'Assign items to schools',
+            icon: '📤',
+            route: 'CheckOut' as const,
             color: colors.secondary.blue,
             badge: stats.schoolsPendingPrep > 0 ? stats.schoolsPendingPrep : undefined,
         },
@@ -412,4 +405,4 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontStyle: 'italic',
     },
-});
+});}
