@@ -50,7 +50,7 @@ export default function OfficeSuppliesHomeScreen() {
                 <TouchableOpacity
                     style={[styles.menuCard, { backgroundColor: colors.background.primary }]}
                     activeOpacity={0.7}
-                    onPress={() => navigation.navigate('SupplyInventoryScreen.tsx' as never)}
+                    onPress={() => navigation.navigate('SupplyInventory' as never)}
                 >
                     <View style={styles.menuCardContent}>
                         <Text style={styles.menuIcon}>📋</Text>

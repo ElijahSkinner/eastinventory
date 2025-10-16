@@ -10,6 +10,8 @@ import {
     ActivityIndicator,
     RefreshControl,
     Alert,
+    Pressable,
+    Modal,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,6 +28,8 @@ import {
 } from '../../lib/appwrite';
 import { Query } from 'appwrite';
 import { Typography, Spacing, BorderRadius, Shadows } from '../../theme';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { OfficeSuppliesStackParamList } from '../../navigation/AppNavigator';
 
 type FilterType = 'all' | 'low-stock' | 'in-stock';
 
@@ -33,12 +37,15 @@ interface SupplyByCategory {
     category: string;
     items: OfficeSupplyItem[];
 }
-
+type SupplyInventoryNavigationProp = NativeStackNavigationProp<
+    OfficeSuppliesStackParamList,
+    'SupplyInventory'
+>;
 export default function SupplyInventoryScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const { isAdmin } = useRole();
-    const navigation = useNavigation();
+    const navigation = useNavigation<SupplyInventoryNavigationProp>();  // Add type
 
     const [supplies, setSupplies] = useState<OfficeSupplyItem[]>([]);
     const [filteredSupplies, setFilteredSupplies] = useState<SupplyByCategory[]>([]);
@@ -47,6 +54,8 @@ export default function SupplyInventoryScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
     const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+    const [selectedSupplyItem, setSelectedSupplyItem] = useState<OfficeSupplyItem | null>(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -305,7 +314,10 @@ export default function SupplyInventoryScreen() {
                                         <TouchableOpacity
                                             key={item.$id}
                                             style={[styles.itemCard, { backgroundColor: colors.background.primary }]}
-                                            onPress={() => alert('Item details coming soon!')}
+                                            onPress={() => {
+                                                setSelectedSupplyItem(item);
+                                                setShowDetailModal(true);
+                                            }}
                                             activeOpacity={0.7}
                                         >
                                             <View style={styles.itemHeader}>
@@ -372,10 +384,178 @@ export default function SupplyInventoryScreen() {
             {/* Add Button */}
             <TouchableOpacity
                 style={[styles.addButton, { backgroundColor: colors.secondary.orange }]}
-                onPress={() => alert('Add supply screen coming soon!')}
+                onPress={() => navigation.navigate('AddEditSupply')}
             >
                 <Text style={styles.addButtonText}>+ Add Supply</Text>
             </TouchableOpacity>
+            {selectedSupplyItem && (
+                <Modal
+                    visible={showDetailModal}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setShowDetailModal(false)}
+                >
+                    <Pressable
+                        style={styles.modalOverlay}
+                        onPress={() => setShowDetailModal(false)}
+                    >
+                        <Pressable
+                            style={[styles.modalContainer, { backgroundColor: colors.background.primary }]}
+                            onPress={(e) => e.stopPropagation()}
+                        >
+                            {/* Modal Header */}
+                            <View style={[styles.modalHeader, { borderBottomColor: colors.ui.border }]}>
+                                <View style={styles.modalTitleContainer}>
+                                    <Text style={[styles.modalTitle, { color: colors.primary.coolGray }]}>
+                                        {selectedSupplyItem.item_name}
+                                    </Text>
+                                    <TouchableOpacity
+                                        onPress={() => setShowDetailModal(false)}
+                                        style={styles.closeButton}
+                                    >
+                                        <Text style={[styles.closeButtonText, { color: colors.text.secondary }]}>
+                                            ✕
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <Text style={[styles.modalSubtitle, { color: colors.text.secondary }]}>
+                                    {selectedSupplyItem.category}
+                                </Text>
+                            </View>
+
+                            {/* Modal Content */}
+                            <ScrollView style={styles.modalContent}>
+                                <View style={styles.detailSection}>
+                                    <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                        Current Stock
+                                    </Text>
+                                    <Text style={[styles.detailValue, { color: colors.text.primary }]}>
+                                        {formatQuantity(selectedSupplyItem.current_quantity, selectedSupplyItem.unit)}
+                                    </Text>
+                                </View>
+
+                                <View style={styles.detailSection}>
+                                    <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                        Reorder Point
+                                    </Text>
+                                    <Text style={[styles.detailValue, { color: colors.text.primary }]}>
+                                        {selectedSupplyItem.reorder_point} {selectedSupplyItem.unit}s
+                                    </Text>
+                                </View>
+
+                                <View style={styles.detailSection}>
+                                    <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                        Reorder Quantity
+                                    </Text>
+                                    <Text style={[styles.detailValue, { color: colors.text.primary }]}>
+                                        {selectedSupplyItem.reorder_quantity} {selectedSupplyItem.unit}s
+                                    </Text>
+                                </View>
+
+                                {selectedSupplyItem.unit_cost && (
+                                    <View style={styles.detailSection}>
+                                        <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                            Unit Cost
+                                        </Text>
+                                        <Text style={[styles.detailValue, { color: colors.text.primary }]}>
+                                            ${selectedSupplyItem.unit_cost.toFixed(2)}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {selectedSupplyItem.supplier && (
+                                    <View style={styles.detailSection}>
+                                        <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                            Supplier
+                                        </Text>
+                                        <Text style={[styles.detailValue, { color: colors.text.primary }]}>
+                                            {selectedSupplyItem.supplier}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {selectedSupplyItem.supplier_sku && (
+                                    <View style={styles.detailSection}>
+                                        <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                            Supplier SKU
+                                        </Text>
+                                        <Text style={[styles.detailValue, { color: colors.text.primary }]}>
+                                            {selectedSupplyItem.supplier_sku}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {selectedSupplyItem.location && (
+                                    <View style={styles.detailSection}>
+                                        <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                            Location
+                                        </Text>
+                                        <Text style={[styles.detailValue, { color: colors.text.primary }]}>
+                                            📍 {selectedSupplyItem.location}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {selectedSupplyItem.notes && (
+                                    <View style={styles.detailSection}>
+                                        <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                            Notes
+                                        </Text>
+                                        <Text style={[styles.detailValue, { color: colors.text.primary }]}>
+                                            {selectedSupplyItem.notes}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {needsReorder(selectedSupplyItem) && (
+                                    <View style={[styles.reorderWarning, {
+                                        backgroundColor: `${colors.secondary.red}15`,
+                                        borderColor: colors.secondary.red
+                                    }]}>
+                                        <Text style={[styles.reorderWarningText, { color: colors.secondary.red }]}>
+                                            🔔 Below reorder point! Order {selectedSupplyItem.reorder_quantity} {selectedSupplyItem.unit}s
+                                        </Text>
+                                    </View>
+                                )}
+                            </ScrollView>
+
+                            {/* Modal Actions */}
+                            <View style={[styles.modalFooter, { borderTopColor: colors.ui.border }]}>
+                                {isAdmin && (
+                                    <TouchableOpacity
+                                        style={[styles.modalActionButton, {
+                                            backgroundColor: colors.secondary.orange,
+                                            flex: 1,
+                                            marginRight: Spacing.sm
+                                        }]}
+                                        onPress={() => {
+                                            setShowDetailModal(false);
+                                            navigation.navigate('AddEditSupply', { item: selectedSupplyItem });
+                                        }}
+                                    >
+                                        <Text style={[styles.modalActionButtonText, { color: '#fff' }]}>
+                                            ✏️ Edit
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                <TouchableOpacity
+                                    style={[styles.modalActionButton, {
+                                        backgroundColor: colors.background.secondary,
+                                        borderWidth: 1,
+                                        borderColor: colors.ui.border,
+                                        flex: 1
+                                    }]}
+                                    onPress={() => setShowDetailModal(false)}
+                                >
+                                    <Text style={[styles.modalActionButtonText, { color: colors.text.primary }]}>
+                                        Close
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </Pressable>
+                    </Pressable>
+                </Modal>
+            )}
         </View>
     );
 }
@@ -544,5 +724,85 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: Typography.sizes.md,
         fontWeight: Typography.weights.bold,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContainer: {
+        maxHeight: '80%',
+        borderTopLeftRadius: BorderRadius.xl,
+        borderTopRightRadius: BorderRadius.xl,
+        ...Shadows.lg,
+    },
+    modalHeader: {
+        padding: Spacing.lg,
+        borderBottomWidth: 1,
+    },
+    modalTitleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: Spacing.xs,
+    },
+    modalTitle: {
+        fontSize: Typography.sizes.xl,
+        fontWeight: Typography.weights.bold,
+        flex: 1,
+    },
+    modalSubtitle: {
+        fontSize: Typography.sizes.md,
+    },
+    closeButton: {
+        padding: Spacing.xs,
+    },
+    closeButtonText: {
+        fontSize: 24,
+    },
+    modalContent: {
+        padding: Spacing.lg,
+        maxHeight: 400,
+    },
+    detailSection: {
+        marginBottom: Spacing.md,
+        paddingBottom: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    detailLabel: {
+        fontSize: Typography.sizes.sm,
+        marginBottom: Spacing.xs,
+    },
+    detailValue: {
+        fontSize: Typography.sizes.lg,
+        fontWeight: Typography.weights.semibold,
+    },
+    reorderWarning: {
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        borderWidth: 2,
+        marginTop: Spacing.md,
+    },
+    reorderWarningText: {
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.semibold,
+        textAlign: 'center',
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        padding: Spacing.lg,
+        borderTopWidth: 1,
+        gap: Spacing.sm,
+    },
+    modalActionButton: {
+        paddingVertical: Spacing.md,
+        borderRadius: BorderRadius.md,
+        alignItems: 'center',
+        ...Shadows.sm,
+    },
+    modalActionButtonText: {
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.semibold,
     },
 });

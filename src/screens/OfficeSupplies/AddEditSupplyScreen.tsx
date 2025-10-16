@@ -178,10 +178,13 @@ export default function AddEditSupplyScreen() {
                     </TouchableOpacity>
 
                     {showCategoryPicker && (
-                        <View style={[styles.pickerList, {
-                            backgroundColor: colors.background.secondary,
-                            borderColor: colors.ui.border
-                        }]}>
+                        <ScrollView
+                            style={[styles.pickerList, {
+                                backgroundColor: colors.background.secondary,
+                                borderColor: colors.ui.border
+                            }]}
+                            nestedScrollEnabled={true}  // Add this
+                        >
                             {SUPPLY_CATEGORIES.map(cat => (
                                 <TouchableOpacity
                                     key={cat}
@@ -196,7 +199,7 @@ export default function AddEditSupplyScreen() {
                                     </Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
                     )}
 
                     <Text style={[styles.label, { color: colors.text.primary }]}>
@@ -218,10 +221,13 @@ export default function AddEditSupplyScreen() {
                     </TouchableOpacity>
 
                     {showUnitPicker && (
-                        <View style={[styles.pickerList, {
-                            backgroundColor: colors.background.secondary,
-                            borderColor: colors.ui.border
-                        }]}>
+                        <ScrollView
+                            style={[styles.pickerList, {
+                                backgroundColor: colors.background.secondary,
+                                borderColor: colors.ui.border
+                            }]}
+                            nestedScrollEnabled={true}  // Add this
+                        >
                             {SUPPLY_UNITS.map(u => (
                                 <TouchableOpacity
                                     key={u}
@@ -236,7 +242,7 @@ export default function AddEditSupplyScreen() {
                                     </Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
                     )}
                 </View>
 

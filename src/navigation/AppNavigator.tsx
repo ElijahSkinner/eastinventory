@@ -1,10 +1,10 @@
 // src/navigation/AppNavigator.tsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createDrawerNavigator, DrawerNavigationProp } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Colors } from '../theme';
-import { Image, View, Text, StyleSheet } from 'react-native';
+import {Image, View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 
 // Import existing screens
 import HomeScreen from '../screens/HomeScreen';
@@ -19,6 +19,9 @@ import CreateSchoolOrderScreen from '../screens/CreateSchoolOrderScreen';
 // New Office Supplies screens
 import OfficeSuppliesHomeScreen from '../screens/OfficeSupplies/OfficeSuppliesHomeScreen';
 import SupplyInventoryScreen from '../screens/OfficeSupplies/SupplyInventoryScreen';
+import ReceiveSuppliesScreen from '../screens/OfficeSupplies/ReceiveSuppliesScreen';
+import AddEditSupplyScreen from '../screens/OfficeSupplies/AddEditSupplyScreen';
+import { OfficeSupplyItem } from '../lib/appwrite';
 
 export type RootStackParamList = {
     Main: undefined;
@@ -46,6 +49,7 @@ export type OfficeSuppliesStackParamList = {
     ReceiveSupplies: undefined;
     DispenseSupplies: undefined;
     ReorderAlerts: undefined;
+    AddEditSupply: { item?: OfficeSupplyItem } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -57,7 +61,7 @@ const OfficeSuppliesStack = createNativeStackNavigator<OfficeSuppliesStackParamL
 function EquipmentNavigator() {
     return (
         <EquipmentStack.Navigator
-            screenOptions={{
+            screenOptions={({navigation}) => ({
                 headerStyle: {
                     backgroundColor: Colors.primary.cyan,
                 },
@@ -68,41 +72,50 @@ function EquipmentNavigator() {
                 headerTitle: () => (
                     <Image
                         source={require('../../assets/logos/EAST_Logo_White_Horz.png')}
-                        style={{ width: 140, height: 35 }}
+                        style={{width: 140, height: 35}}
                         resizeMode="contain"
                     />
                 ),
-            }}
+                headerLeft: () => (
+                    <TouchableOpacity
+                        onPress={() => {
+                            (navigation.getParent() as DrawerNavigationProp<DrawerParamList>)?.openDrawer();
+                        }}
+                        style={{marginLeft: 15}}
+                    >
+                        <Text style={{color: Colors.text.white, fontSize: 24}}>☰</Text>
+                    </TouchableOpacity>
+                ),
+            })}
         >
             <EquipmentStack.Screen
                 name="PurchaseOrders"
                 component={PurchaseOrdersScreen}
-                options={{ title: 'Incoming Shipments' }}
+                options={{title: 'Incoming Shipments'}}
             />
             <EquipmentStack.Screen
                 name="Receiving"
                 component={ReceivingScreen}
-                options={{ title: 'Receive Items' }}
+                options={{title: 'Receive Items'}}
             />
             <EquipmentStack.Screen
                 name="Inventory"
                 component={InventoryListScreen}
-                options={{ title: 'Equipment Inventory' }}
+                options={{title: 'Equipment Inventory'}}
             />
             <EquipmentStack.Screen
                 name="CheckOut"
                 component={CheckOutScreen}
-                options={{ title: 'Check Out' }}
+                options={{title: 'Check Out'}}
             />
         </EquipmentStack.Navigator>
     );
 }
-
 // Office Supplies section stack navigator
 function OfficeSuppliesNavigator() {
     return (
         <OfficeSuppliesStack.Navigator
-            screenOptions={{
+            screenOptions={({ navigation }) => ({
                 headerStyle: {
                     backgroundColor: Colors.secondary.orange,
                 },
@@ -117,12 +130,37 @@ function OfficeSuppliesNavigator() {
                         resizeMode="contain"
                     />
                 ),
-            }}
+                headerLeft: () => (
+                    <TouchableOpacity
+                        onPress={() => {
+                            (navigation.getParent() as DrawerNavigationProp<DrawerParamList>)?.openDrawer();
+                        }}
+                        style={{ marginLeft: 15 }}
+                    >
+                        <Text style={{ color: Colors.text.white, fontSize: 24 }}>☰</Text>
+                    </TouchableOpacity>
+                ),
+            })}
         >
             <OfficeSuppliesStack.Screen
                 name="OfficeSuppliesHome"
                 component={OfficeSuppliesHomeScreen}
                 options={{ title: 'Office Supplies' }}
+            />
+            <OfficeSuppliesStack.Screen
+                name="SupplyInventory"
+                component={SupplyInventoryScreen}
+                options={{ title: 'Supply Inventory' }}
+            />
+            <OfficeSuppliesStack.Screen
+                name="ReceiveSupplies"
+                component={ReceiveSuppliesScreen}
+                options={{ title: 'Receive Supplies' }}
+            />
+            <OfficeSuppliesStack.Screen
+                name="AddEditSupply"
+                component={AddEditSupplyScreen}
+                options={{ title: 'Add Supply Item' }}
             />
         </OfficeSuppliesStack.Navigator>
     );
