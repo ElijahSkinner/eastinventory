@@ -137,7 +137,7 @@ export default function CreateIncomingShipmentScreen() {
                 COLLECTIONS.PURCHASE_ORDERS,
                 ID.unique(),
                 {
-                    SH_number: SHNumber,
+                    po_number: SHNumber,
                     vendor: vendor.trim(),
                     order_date: orderDate,
                     expected_delivery: expectedDelivery || undefined,

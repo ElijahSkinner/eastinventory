@@ -22,6 +22,8 @@ export const COLLECTIONS = {
     SCHOOL_ORDER_ITEMS: 'school_order_items',
     STANDARD_PACKAGE: 'standard_package',
     SCHOOL_CHECKOUTS: 'school_checkouts',
+    OFFICE_SUPPLY_ITEMS: 'office_supply_items',
+    OFFICE_SUPPLY_TRANSACTIONS: 'office_supply_transactions',
 } as const;
 
 // Existing Type definitions
@@ -90,7 +92,7 @@ export interface UserSettings extends Models.Document {
 
 // New Type definitions for Procurement System
 export interface IncomingShipment extends Models.Document {
-    SH_number: string;
+    po_number: string;
     vendor: string;
     order_date: string;
     expected_delivery?: string;
@@ -204,3 +206,82 @@ export function formatDate(dateString: string): string {
 }
 
 export { client, Query, ID };
+
+export interface OfficeSupplyItem extends Models.Document {
+    item_name: string;
+    category: string;
+    unit: string;
+    current_quantity: number;
+    reorder_point: number;
+    reorder_quantity: number;
+    unit_cost?: number;
+    supplier?: string;
+    supplier_sku?: string;
+    location?: string;
+    notes?: string;
+}
+
+export interface OfficeSupplyTransaction extends Models.Document {
+    supply_item_id: string;
+    transaction_type: 'received' | 'dispensed' | 'adjustment' | 'shrinkage' | 'returned';
+    quantity: number;
+    previous_quantity: number;
+    new_quantity: number;
+    performed_by: string;
+    transaction_date: string;
+    recipient?: string;
+    notes?: string;
+}
+
+// Helper function to check if item needs reorder
+export function needsReorder(item: OfficeSupplyItem): boolean {
+    return item.current_quantity <= item.reorder_point;
+}
+
+// Helper function to calculate reorder priority (how urgent)
+export function getReorderPriority(item: OfficeSupplyItem): 'critical' | 'urgent' | 'low' {
+    const percentRemaining = (item.current_quantity / item.reorder_point) * 100;
+
+    if (item.current_quantity === 0) return 'critical';
+    if (percentRemaining <= 50) return 'urgent';
+    return 'low';
+}
+
+// Helper function to format quantity with unit
+export function formatQuantity(quantity: number, unit: string): string {
+    return `${quantity} ${quantity === 1 ? unit : unit + 's'}`;
+}
+
+// Constants
+export const SUPPLY_CATEGORIES = [
+    'Paper Products',
+    'Writing Supplies',
+    'Adhesives & Tape',
+    'Filing & Storage',
+    'Cleaning Supplies',
+    'Breakroom Supplies',
+    'Technology Accessories',
+    'Packaging Materials',
+    'Office Furniture Accessories',
+    'Printing Supplies',
+    'Other',
+] as const;
+
+export const SUPPLY_UNITS = [
+    'box',
+    'ream',
+    'pack',
+    'roll',
+    'bottle',
+    'each',
+    'case',
+    'set',
+] as const;
+
+export const TRANSACTION_TYPES = [
+    'received',
+    'dispensed',
+    'adjustment',
+    'shrinkage',
+    'returned',
+] as const;

@@ -208,7 +208,7 @@ export default function ReceivingScreen({ route }: any) {
                         inventory_item_id: newItem.$id,
                         performed_by: user?.name || 'Unknown',
                         transaction_date: new Date().toISOString(),
-                        notes: `Received via PO ${receivingSession.IncomingShipment.SH_number} (SKU: ${receivingSession.sku})`,
+                        notes: `Received via PO ${receivingSession.IncomingShipment.po_number} (SKU: ${receivingSession.sku})`,
                     }
                 );
 
@@ -349,7 +349,7 @@ export default function ReceivingScreen({ route }: any) {
                             {receivingSession.itemType.item_name}
                         </Text>
                         <Text style={[styles.poInfo, { color: colors.text.secondary }]}>
-                            {receivingSession.IncomingShipment.SH_number} • {receivingSession.IncomingShipment.vendor}
+                            {receivingSession.IncomingShipment.po_number} • {receivingSession.IncomingShipment.vendor}
                         </Text>
 
                         <View style={styles.quantityGrid}>
