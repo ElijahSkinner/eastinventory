@@ -1,4 +1,4 @@
-// src/screens/CreatePurchaseOrderScreen.tsx
+// src/screens/CreateIncomingShipmentScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -27,7 +27,7 @@ interface LineItem {
     quantity: string;
 }
 
-export default function CreatePurchaseOrderScreen() {
+export default function CreateIncomingShipmentScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const navigation = useNavigation();
@@ -124,20 +124,20 @@ export default function CreatePurchaseOrderScreen() {
         setSubmitting(true);
 
         try {
-            // Generate PO number
+            // Generate SH number
             const year = new Date().getFullYear();
-            const poNumber = `PO-${year}-${Date.now().toString().slice(-6)}`;
+            const SHNumber = `SH-${year}-${Date.now().toString().slice(-6)}`;
 
             // Calculate totals
             const totalItems = lineItems.reduce((sum, item) => sum + parseInt(item.quantity), 0);
 
-            // Create PO
-            const newPO = await databases.createDocument(
+            // Create SH
+            const newSH = await databases.createDocument(
                 DATABASE_ID,
                 COLLECTIONS.PURCHASE_ORDERS,
                 ID.unique(),
                 {
-                    po_number: poNumber,
+                    SH_number: SHNumber,
                     vendor: vendor.trim(),
                     order_date: orderDate,
                     expected_delivery: expectedDelivery || undefined,
@@ -153,10 +153,10 @@ export default function CreatePurchaseOrderScreen() {
                 lineItems.map(item =>
                     databases.createDocument(
                         DATABASE_ID,
-                        COLLECTIONS.PO_LINE_ITEMS,
+                        COLLECTIONS.po_LINE_ITEMS,
                         ID.unique(),
                         {
-                            purchase_order_id: newPO.$id,
+                            purchase_order_id: newSH.$id,
                             item_type_id: item.item_type_id,
                             sku: item.sku,
                             quantity_ordered: parseInt(item.quantity),
@@ -166,12 +166,12 @@ export default function CreatePurchaseOrderScreen() {
                 )
             );
 
-            Alert.alert('Success', `Purchase Order ${poNumber} created successfully!`, [
+            Alert.alert('Success', `Incoming Shipment ${SHNumber} created successfully!`, [
                 { text: 'OK', onPress: () => navigation.goBack() },
             ]);
         } catch (error) {
-            console.error('Error creating purchase order:', error);
-            Alert.alert('Error', 'Failed to create purchase order. Please try again.');
+            console.error('Error creating Incoming Shipment:', error);
+            Alert.alert('Error', 'Failed to create Incoming Shipment. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -193,10 +193,10 @@ export default function CreatePurchaseOrderScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
             <ScrollView style={styles.content}>
-                {/* PO Details Section */}
+                {/* SH Details Section */}
                 <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
                     <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
-                        Purchase Order Details
+                        Incoming Shipment Details
                     </Text>
 
                     <Text style={[styles.label, { color: colors.text.primary }]}>
@@ -541,7 +541,7 @@ export default function CreatePurchaseOrderScreen() {
                     {submitting ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.submitButtonText}>Create Purchase Order</Text>
+                        <Text style={styles.submitButtonText}>Create Incoming Shipment</Text>
                     )}
                 </TouchableOpacity>
             </View>

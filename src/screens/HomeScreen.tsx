@@ -97,10 +97,10 @@ export default function HomeScreen() {
 
     const menuItems = [
         {
-            title: 'Purchase Orders',
+            title: 'Incoming Shipments',
             description: 'Manage vendor orders',
             icon: '📦',
-            route: 'PurchaseOrders' as const,
+            route: 'IncomingShipments' as const,
             color: colors.primary.cyan,
             badge: stats.posInProgress > 0 ? stats.posInProgress : undefined,
         },

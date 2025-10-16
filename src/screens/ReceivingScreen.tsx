@@ -17,18 +17,18 @@ import {
     databases,
     DATABASE_ID,
     COLLECTIONS,
-    POLineItem,
+    SHLineItem,
     ItemType,
-    PurchaseOrder,
+    IncomingShipment,
 } from '../lib/appwrite';
 import { Query, ID } from 'appwrite';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
 
 interface ReceivingSession {
     sku: string;
-    poLineItem: POLineItem;
+    SHLineItem: SHLineItem;
     itemType: ItemType;
-    purchaseOrder: PurchaseOrder;
+    IncomingShipment: IncomingShipment;
     quantityToReceive: number;
     location: string;
 }
@@ -67,14 +67,14 @@ export default function ReceivingScreen({ route }: any) {
             // ===== FIX #2: Find INCOMPLETE line items only =====
             const lineItemsResponse = await databases.listDocuments(
                 DATABASE_ID,
-                COLLECTIONS.PO_LINE_ITEMS,
+                COLLECTIONS.po_LINE_ITEMS,
                 [Query.equal('sku', sku), Query.limit(100)]  // Get all matching SKUs
             );
 
             if (lineItemsResponse.documents.length === 0) {
                 Alert.alert(
                     'SKU Not Found',
-                    `No purchase order found for SKU: ${sku}\n\nThis SKU may not be in any active purchase orders.`
+                    `No Incoming Shipment found for SKU: ${sku}\n\nThis SKU may not be in any active Incoming Shipments.`
                 );
                 setProcessing(false);
                 return;
@@ -88,41 +88,41 @@ export default function ReceivingScreen({ route }: any) {
             if (incompleteLineItems.length === 0) {
                 Alert.alert(
                     'All Orders Complete',
-                    `All purchase orders for SKU ${sku} have been fully received.`
+                    `All Incoming Shipments for SKU ${sku} have been fully received.`
                 );
                 setProcessing(false);
                 return;
             }
 
             // Get the first incomplete line item (you could also show a picker if multiple)
-            const poLineItem = incompleteLineItems[0] as unknown as POLineItem;
+            const SHLineItem = incompleteLineItems[0] as unknown as SHLineItem;
 
             // Load item type
             const itemType = await databases.getDocument(
                 DATABASE_ID,
                 COLLECTIONS.ITEM_TYPES,
-                poLineItem.item_type_id
+                SHLineItem.item_type_id
             );
 
-            // Load purchase order
-            const purchaseOrder = await databases.getDocument(
+            // Load Incoming Shipment
+            const IncomingShipment = await databases.getDocument(
                 DATABASE_ID,
                 COLLECTIONS.PURCHASE_ORDERS,
-                poLineItem.purchase_order_id
+                SHLineItem.purchase_order_id
             );
 
             // Create receiving session
             setReceivingSession({
                 sku,
-                poLineItem: poLineItem as POLineItem,
+                SHLineItem: SHLineItem as SHLineItem,
                 itemType: itemType as unknown as ItemType,
-                purchaseOrder: purchaseOrder as unknown as PurchaseOrder,
+                IncomingShipment: IncomingShipment as unknown as IncomingShipment,
                 quantityToReceive: 0,
                 location: '',
             });
 
             // Pre-fill with remaining quantity
-            const remaining = poLineItem.quantity_ordered - poLineItem.quantity_received;
+            const remaining = SHLineItem.quantity_ordered - SHLineItem.quantity_received;
             setQuantityInput(remaining.toString());
             setLocationInput('');
 
@@ -158,7 +158,7 @@ export default function ReceivingScreen({ route }: any) {
             return;
         }
 
-        const remaining = receivingSession.poLineItem.quantity_ordered - receivingSession.poLineItem.quantity_received;
+        const remaining = receivingSession.SHLineItem.quantity_ordered - receivingSession.SHLineItem.quantity_received;
 
         if (quantity > remaining) {
             Alert.alert(
@@ -208,7 +208,7 @@ export default function ReceivingScreen({ route }: any) {
                         inventory_item_id: newItem.$id,
                         performed_by: user?.name || 'Unknown',
                         transaction_date: new Date().toISOString(),
-                        notes: `Received via PO ${receivingSession.purchaseOrder.po_number} (SKU: ${receivingSession.sku})`,
+                        notes: `Received via PO ${receivingSession.IncomingShipment.SH_number} (SKU: ${receivingSession.sku})`,
                     }
                 );
 
@@ -216,11 +216,11 @@ export default function ReceivingScreen({ route }: any) {
             }
 
             // Update PO line item quantity received
-            const newQuantityReceived = receivingSession.poLineItem.quantity_received + quantity;
+            const newQuantityReceived = receivingSession.SHLineItem.quantity_received + quantity;
             await databases.updateDocument(
                 DATABASE_ID,
-                COLLECTIONS.PO_LINE_ITEMS,
-                receivingSession.poLineItem.$id,
+                COLLECTIONS.po_LINE_ITEMS,
+                receivingSession.SHLineItem.$id,
                 {
                     quantity_received: newQuantityReceived,
                 }
@@ -229,8 +229,8 @@ export default function ReceivingScreen({ route }: any) {
             // ===== FIX #1: Update PO totals based on LINE ITEMS after update =====
             const allLineItems = await databases.listDocuments(
                 DATABASE_ID,
-                COLLECTIONS.PO_LINE_ITEMS,
-                [Query.equal('purchase_order_id', receivingSession.purchaseOrder.$id)]
+                COLLECTIONS.po_LINE_ITEMS,
+                [Query.equal('purchase_order_id', receivingSession.IncomingShipment.$id)]
             );
 
             // Calculate totals from LINE ITEMS (after the update above)
@@ -256,7 +256,7 @@ export default function ReceivingScreen({ route }: any) {
             await databases.updateDocument(
                 DATABASE_ID,
                 COLLECTIONS.PURCHASE_ORDERS,
-                receivingSession.purchaseOrder.$id,
+                receivingSession.IncomingShipment.$id,
                 {
                     received_items: totalReceived,
                     total_items: totalOrdered,
@@ -332,7 +332,7 @@ export default function ReceivingScreen({ route }: any) {
 
     // Receiving Session View
     if (receivingSession) {
-        const remaining = receivingSession.poLineItem.quantity_ordered - receivingSession.poLineItem.quantity_received;
+        const remaining = receivingSession.SHLineItem.quantity_ordered - receivingSession.SHLineItem.quantity_received;
 
         return (
             <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
@@ -349,7 +349,7 @@ export default function ReceivingScreen({ route }: any) {
                             {receivingSession.itemType.item_name}
                         </Text>
                         <Text style={[styles.poInfo, { color: colors.text.secondary }]}>
-                            {receivingSession.purchaseOrder.po_number} • {receivingSession.purchaseOrder.vendor}
+                            {receivingSession.IncomingShipment.SH_number} • {receivingSession.IncomingShipment.vendor}
                         </Text>
 
                         <View style={styles.quantityGrid}>
@@ -358,7 +358,7 @@ export default function ReceivingScreen({ route }: any) {
                                     Expected
                                 </Text>
                                 <Text style={[styles.quantityValue, { color: colors.text.primary }]}>
-                                    {receivingSession.poLineItem.quantity_ordered}
+                                    {receivingSession.SHLineItem.quantity_ordered}
                                 </Text>
                             </View>
 
@@ -367,7 +367,7 @@ export default function ReceivingScreen({ route }: any) {
                                     Received
                                 </Text>
                                 <Text style={[styles.quantityValue, { color: colors.secondary.orange }]}>
-                                    {receivingSession.poLineItem.quantity_received}
+                                    {receivingSession.SHLineItem.quantity_received}
                                 </Text>
                             </View>
 

@@ -1,4 +1,4 @@
-// src/screens/PurchaseOrdersScreen.tsx
+// src/screens/IncomingShipmentsScreen.tsx
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useState, useCallback } from 'react';
 import {
@@ -18,10 +18,10 @@ import {
     databases,
     DATABASE_ID,
     COLLECTIONS,
-    PurchaseOrder,
-    POLineItem,
+    IncomingShipment,
+    SHLineItem,
     ItemType,
-    calculatePOProgress,
+    calculateSHProgress,
     getStatusIcon,
     formatDate,
 } from '../lib/appwrite';
@@ -32,18 +32,18 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TabParamList, RootStackParamList } from '../navigation/AppNavigator';
 
-export default function PurchaseOrdersScreen() {
+export default function IncomingShipmentsScreen() {
     const { colors } = useTheme();
     const { isAdmin } = useRole();
-    type PurchaseOrdersNavigationProp = CompositeNavigationProp<
-        BottomTabNavigationProp<TabParamList, 'PurchaseOrders'>,
+    type IncomingShipmentsNavigationProp = CompositeNavigationProp<
+        BottomTabNavigationProp<TabParamList, 'IncomingShipments'>,
         NativeStackNavigationProp<RootStackParamList>
     >;
-    const navigation = useNavigation<PurchaseOrdersNavigationProp>();
+    const navigation = useNavigation<IncomingShipmentsNavigationProp>();
 
-    const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-    const [expandedPOId, setExpandedPOId] = useState<string | null>(null);
-    const [lineItems, setLineItems] = useState<(POLineItem & { itemType?: ItemType })[]>([]);
+    const [IncomingShipments, setIncomingShipments] = useState<IncomingShipment[]>([]);
+    const [expandedSHId, setExpandedSHId] = useState<string | null>(null);
+    const [lineItems, setLineItems] = useState<(SHLineItem & { itemType?: ItemType })[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingLineItems, setLoadingLineItems] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -52,11 +52,11 @@ export default function PurchaseOrdersScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            loadPurchaseOrders();
+            loadIncomingShipments();
         }, [filterStatus, searchQuery])
     );
 
-    const loadPurchaseOrders = async () => {
+    const loadIncomingShipments = async () => {
         try {
             setLoading(true);
 
@@ -72,20 +72,20 @@ export default function PurchaseOrdersScreen() {
                 queries
             );
 
-            let orders = response.documents as unknown as PurchaseOrder[];
+            let orders = response.documents as unknown as IncomingShipment[];
 
             // Apply search filter
             if (searchQuery) {
                 orders = orders.filter(
-                    (po) =>
-                        po.po_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        po.vendor.toLowerCase().includes(searchQuery.toLowerCase())
+                    (sh) =>
+                        sh.SH_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        sh.vendor.toLowerCase().includes(searchQuery.toLowerCase())
                 );
             }
 
-            setPurchaseOrders(orders);
+            setIncomingShipments(orders);
         } catch (error) {
-            console.error('Error loading purchase orders:', error);
+            console.error('Error loading Incoming Shipments:', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -94,27 +94,27 @@ export default function PurchaseOrdersScreen() {
 
     const handleRefresh = useCallback(() => {
         setRefreshing(true);
-        loadPurchaseOrders();
+        loadIncomingShipments();
     }, [filterStatus, searchQuery]);
 
     const handleExpandPO = async (poId: string) => {
-        if (expandedPOId === poId) {
-            setExpandedPOId(null);
+        if (expandedSHId === poId) {
+            setExpandedSHId(null);
             setLineItems([]);
             return;
         }
 
-        setExpandedPOId(poId);
+        setExpandedSHId(poId);
         setLoadingLineItems(true);
 
         try {
             const response = await databases.listDocuments(
                 DATABASE_ID,
-                COLLECTIONS.PO_LINE_ITEMS,
+                COLLECTIONS.po_LINE_ITEMS,
                 [Query.equal('purchase_order_id', poId)]
             );
 
-            const items = response.documents as unknown as POLineItem[];
+            const items = response.documents as unknown as SHLineItem[];
 
             // Load item type details for each line item
             const itemsWithTypes = await Promise.all(
@@ -177,15 +177,15 @@ export default function PurchaseOrdersScreen() {
             </View>
         );
     }
-    type PurchaseOrdersScreenProps = {
-        navigation: BottomTabNavigationProp<TabParamList, 'PurchaseOrders'>;
+    type IncomingShipmentsScreenProps = {
+        navigation: BottomTabNavigationProp<TabParamList, 'IncomingShipments'>;
     };
     return (
         <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
             {/* Header with Admin Badge */}
             <View style={[styles.headerContainer, { backgroundColor: colors.background.primary }]}>
                 <Text style={[styles.headerTitle, { color: colors.primary.coolGray }]}>
-                    Purchase Orders
+                    Incoming Shipments
                 </Text>
                 {isAdmin && (
                     <View style={[styles.roleBadge, { backgroundColor: '#e74c3c' }]}>
@@ -205,7 +205,7 @@ export default function PurchaseOrdersScreen() {
                     placeholderTextColor={colors.text.secondary}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
-                    onSubmitEditing={loadPurchaseOrders}
+                    onSubmitEditing={loadIncomingShipments}
                 />
             </View>
 
@@ -247,47 +247,47 @@ export default function PurchaseOrdersScreen() {
                 </ScrollView>
             </View>
 
-            {/* PO List */}
+            {/* SH List */}
             <ScrollView
                 style={styles.listContainer}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
             >
-                {purchaseOrders.length === 0 ? (
+                {IncomingShipments.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-                            {searchQuery ? 'No purchase orders match your search' : 'No purchase orders yet'}
+                            {searchQuery ? 'No Incoming Shipments match your search' : 'No Incoming Shipments yet'}
                         </Text>
                     </View>
                 ) : (
-                    purchaseOrders.map((po) => {
-                        const progress = calculatePOProgress(po);
-                        const statusColor = getStatusColor(po.order_status);
+                    IncomingShipments.map((sh) => {
+                        const progress = calculateSHProgress(sh);
+                        const statusColor = getStatusColor(sh.order_status);
 
                         return (
-                            <View key={po.$id} style={styles.poContainer}>
-                                {/* PO Card */}
+                            <View key={sh.$id} style={styles.shContainer}>
+                                {/* sh Card */}
                                 <TouchableOpacity
                                     style={[
-                                        styles.poCard,
+                                        styles.shCard,
                                         { backgroundColor: colors.background.primary },
                                     ]}
-                                    onPress={() => handleExpandPO(po.$id)}
+                                    onPress={() => handleExpandPO(sh.$id)}
                                     activeOpacity={0.7}
                                 >
-                                    <View style={styles.poHeader}>
-                                        <View style={styles.poTitleRow}>
-                                            <Text style={styles.statusIcon}>{getStatusIcon(po.order_status)}</Text>
-                                            <View style={styles.poInfo}>
+                                    <View style={styles.shHeader}>
+                                        <View style={styles.shTitleRow}>
+                                            <Text style={styles.statusIcon}>{getStatusIcon(sh.order_status)}</Text>
+                                            <View style={styles.shInfo}>
                                                 <Text
                                                     style={[
-                                                        styles.poNumber,
+                                                        styles.shNumber,
                                                         { color: colors.primary.coolGray },
                                                     ]}
                                                 >
-                                                    {po.po_number}
+                                                    {sh.SH_number}
                                                 </Text>
                                                 <Text style={[styles.vendor, { color: colors.text.secondary }]}>
-                                                    {po.vendor}
+                                                    {sh.vendor}
                                                 </Text>
                                             </View>
                                         </View>
@@ -299,7 +299,7 @@ export default function PurchaseOrdersScreen() {
                                             ]}
                                         >
                                             <Text style={[styles.statusText, { color: statusColor }]}>
-                                                {getStatusLabel(po.order_status)}
+                                                {getStatusLabel(sh.order_status)}
                                             </Text>
                                         </View>
                                     </View>
@@ -307,7 +307,7 @@ export default function PurchaseOrdersScreen() {
                                     {/* Progress */}
                                     <View style={styles.progressContainer}>
                                         <Text style={[styles.progressText, { color: colors.text.secondary }]}>
-                                            {po.received_items} of {po.total_items} items received ({progress}%)
+                                            {sh.received_items} of {sh.total_items} items received ({progress}%)
                                         </Text>
                                         <View
                                             style={[
@@ -328,18 +328,18 @@ export default function PurchaseOrdersScreen() {
                                     </View>
 
                                     <Text style={[styles.orderDate, { color: colors.text.secondary }]}>
-                                        Ordered: {formatDate(po.order_date)}
+                                        Ordered: {formatDate(sh.order_date)}
                                     </Text>
 
                                     <Text
                                         style={[styles.expandIcon, { color: colors.text.secondary }]}
                                     >
-                                        {expandedPOId === po.$id ? '˅' : '›'}
+                                        {expandedSHId === sh.$id ? '˅' : '›'}
                                     </Text>
                                 </TouchableOpacity>
 
                                 {/* Expanded Line Items */}
-                                {expandedPOId === po.$id && (
+                                {expandedSHId === sh.$id && (
                                     <View
                                         style={[
                                             styles.lineItemsContainer,
@@ -442,9 +442,9 @@ export default function PurchaseOrdersScreen() {
             {isAdmin && (
                 <TouchableOpacity
                     style={[styles.createButton, { backgroundColor: colors.primary.cyan }]}
-                    onPress={() => navigation.navigate('CreatePurchaseOrder' as never)}
+                    onPress={() => navigation.navigate('CreateIncomingShipment' as never)}
                 >
-                    <Text style={styles.createButtonText}>+ New Purchase Order</Text>
+                    <Text style={styles.createButtonText}>+ New Incoming Shipment</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -512,22 +512,22 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: Typography.sizes.md,
     },
-    poContainer: {
+    shContainer: {
         marginBottom: Spacing.md,
     },
-    poCard: {
+    shCard: {
         borderRadius: BorderRadius.lg,
         padding: Spacing.lg,
         ...Shadows.md,
         position: 'relative',
     },
-    poHeader: {
+    shHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         marginBottom: Spacing.md,
     },
-    poTitleRow: {
+    shTitleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
@@ -536,10 +536,10 @@ const styles = StyleSheet.create({
         fontSize: 24,
         marginRight: Spacing.sm,
     },
-    poInfo: {
+    shInfo: {
         flex: 1,
     },
-    poNumber: {
+    shNumber: {
         fontSize: Typography.sizes.lg,
         fontWeight: Typography.weights.bold,
         marginBottom: Spacing.xs / 2,

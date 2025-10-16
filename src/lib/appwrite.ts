@@ -17,7 +17,7 @@ export const COLLECTIONS = {
     TRANSACTIONS: 'transactions',
     USER_SETTINGS: 'user_settings',
     PURCHASE_ORDERS: 'purchase_orders',
-    PO_LINE_ITEMS: 'po_line_items',
+    po_LINE_ITEMS: 'po_LINE_ITEMS',
     SCHOOL_ORDERS: 'school_orders',
     SCHOOL_ORDER_ITEMS: 'school_order_items',
     STANDARD_PACKAGE: 'standard_package',
@@ -89,8 +89,8 @@ export interface UserSettings extends Models.Document {
 }
 
 // New Type definitions for Procurement System
-export interface PurchaseOrder extends Models.Document {
-    po_number: string;
+export interface IncomingShipment extends Models.Document {
+    SH_number: string;
     vendor: string;
     order_date: string;
     expected_delivery?: string;
@@ -101,7 +101,7 @@ export interface PurchaseOrder extends Models.Document {
     received_items: number;
 }
 
-export interface POLineItem extends Models.Document {
+export interface SHLineItem extends Models.Document {
     purchase_order_id: string;
     item_type_id: string;
     sku: string;
@@ -131,10 +131,10 @@ export interface SchoolOrderItem extends Models.Document {
     notes?: string;
 }
 
-// Helper function to calculate PO completion percentage
-export function calculatePOProgress(po: PurchaseOrder): number {
-    if (po.total_items === 0) return 0;
-    return Math.round((po.received_items / po.total_items) * 100);
+// Helper function to calculate SH completion percentage
+export function calculateSHProgress(SH: IncomingShipment): number {
+    if (SH.total_items === 0) return 0;
+    return Math.round((SH.received_items / SH.total_items) * 100);
 }
 
 // Helper function to calculate School Order completion percentage

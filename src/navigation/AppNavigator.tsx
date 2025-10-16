@@ -8,25 +8,25 @@ import { Image, Text } from 'react-native'; // Add Text import
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
-import PurchaseOrdersScreen from '../screens/PurchaseOrdersScreen';
+import IncomingShipmentsScreen from '../screens/IncomingShipmentsScreen';
 import ReceivingScreen from '../screens/ReceivingScreen';
 import InventoryListScreen from '../screens/InventoryListScreen';
 import SchoolOrdersScreen from '../screens/SchoolOrdersScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import CreatePurchaseOrderScreen from '../screens/CreatePurchaseOrderScreen';
+import CreateIncomingShipmentScreen from '../screens/CreateIncomingShipmentScreen';
 import CreateSchoolOrderScreen from '../screens/CreateSchoolOrderScreen';
 import CheckOutScreen from '../screens/CheckOutScreen';
 
 
 export type RootStackParamList = {
     MainTabs: undefined;
-    CreatePurchaseOrder: undefined;
+    CreateIncomingShipment: undefined;
     CreateSchoolOrder: undefined;
 };
 
 export type TabParamList = {
     Dashboard: undefined;
-    PurchaseOrders: undefined;
+    IncomingShipments: undefined;
     Receiving: { sku?: string } | undefined;
     Inventory: undefined;
     CheckOut: undefined;
@@ -79,11 +79,11 @@ function MainTabs() {
                 }}
             />
             <Tab.Screen
-                name="PurchaseOrders"
-                component={PurchaseOrdersScreen}
+                name="IncomingShipments"
+                component={IncomingShipmentsScreen}
                 options={{
-                    title: 'Purchase Orders',
-                    tabBarLabel: 'Orders',
+                    title: 'Incoming Shipments',
+                    tabBarLabel: 'Shipments',
                     tabBarIcon: ({ color, size }) => <TabIcon icon="📦" color={color} />,
                 }}
             />
@@ -157,9 +157,9 @@ export default function AppNavigator() {
                     options={{ headerShown: false }}
                 />
                 <Stack.Screen
-                    name="CreatePurchaseOrder"
-                    component={CreatePurchaseOrderScreen}
-                    options={{ title: 'New Purchase Order' }}
+                    name="CreateIncomingShipment"
+                    component={CreateIncomingShipmentScreen}
+                    options={{ title: 'New Incoming Shipment' }}
                 />
                 <Stack.Screen
                     name="CreateSchoolOrder"
