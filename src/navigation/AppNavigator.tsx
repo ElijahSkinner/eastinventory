@@ -1,11 +1,13 @@
 // src/navigation/AppNavigator.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator, DrawerNavigationProp } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Colors } from '../theme';
-import { Image, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {Image, View, Text, StyleSheet, TouchableOpacity, ScrollView} from 'react-native';
 import { OfficeSupplyItem } from '../lib/appwrite';
+import { useAuth } from '../context/AuthContext';
+import { useRole } from '../hooks/useRole';
 
 // Import existing screens
 import HomeScreen from '../screens/HomeScreen';
@@ -17,14 +19,14 @@ import SettingsScreen from '../screens/SettingsScreen';
 import CreatePurchaseOrderScreen from '../screens/CreateIncomingShipmentScreen';
 import CreateSchoolOrderScreen from '../screens/CreateSchoolOrderScreen';
 
-// New Office Supplies screens
+// Office Supplies screens
 import OfficeSuppliesHomeScreen from '../screens/OfficeSupplies/OfficeSuppliesHomeScreen';
 import SupplyInventoryScreen from '../screens/OfficeSupplies/SupplyInventoryScreen';
 import ReceiveSuppliesScreen from '../screens/OfficeSupplies/ReceiveSuppliesScreen';
 import AddEditSupplyScreen from '../screens/OfficeSupplies/AddEditSupplyScreen';
 import InventoryCountScreen from '../screens/OfficeSupplies/InventoryCountScreen';
-import ReorderAlertsScreen from "@/src/screens/OfficeSupplies/ReorderAlertsScreen";
-import UsageReportsScreen from "@/src/screens/OfficeSupplies/usageReportsScreen";
+import ReorderAlertsScreen from '../screens/OfficeSupplies/ReorderAlertsScreen';
+import UsageReportsScreen from '../screens/OfficeSupplies/usageReportsScreen';
 
 export type RootStackParamList = {
     Main: undefined;
@@ -34,19 +36,19 @@ export type RootStackParamList = {
 
 export type DrawerParamList = {
     Dashboard: undefined;
-    EquipmentStack: undefined;
-    OfficeSuppliesStack: undefined;
+    ProcurementStack: undefined;
+    OfficeInventoryStack: undefined;
     Settings: undefined;
 };
 
-export type EquipmentStackParamList = {
+export type ProcurementStackParamList = {
     PurchaseOrders: undefined;
     Receiving: { sku?: string } | undefined;
     Inventory: undefined;
     CheckOut: undefined;
 };
 
-export type OfficeSuppliesStackParamList = {
+export type OfficeInventoryStackParamList = {
     OfficeSuppliesHome: undefined;
     SupplyInventory: undefined;
     ReceiveSupplies: undefined;
@@ -58,13 +60,13 @@ export type OfficeSuppliesStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Drawer = createDrawerNavigator<DrawerParamList>();
-const EquipmentStack = createNativeStackNavigator<EquipmentStackParamList>();
-const OfficeSuppliesStack = createNativeStackNavigator<OfficeSuppliesStackParamList>();
+const ProcurementStack = createNativeStackNavigator<ProcurementStackParamList>();
+const OfficeInventoryStack = createNativeStackNavigator<OfficeInventoryStackParamList>();
 
-// Equipment section stack navigator
-function EquipmentNavigator() {
+// Procurement section stack navigator
+function ProcurementNavigator() {
     return (
-        <EquipmentStack.Navigator
+        <ProcurementStack.Navigator
             screenOptions={({ navigation }) => ({
                 headerStyle: {
                     backgroundColor: Colors.primary.cyan,
@@ -92,34 +94,34 @@ function EquipmentNavigator() {
                 ),
             })}
         >
-            <EquipmentStack.Screen
+            <ProcurementStack.Screen
                 name="PurchaseOrders"
                 component={PurchaseOrdersScreen}
                 options={{ title: 'Incoming Shipments' }}
             />
-            <EquipmentStack.Screen
+            <ProcurementStack.Screen
                 name="Receiving"
                 component={ReceivingScreen}
                 options={{ title: 'Receive Items' }}
             />
-            <EquipmentStack.Screen
+            <ProcurementStack.Screen
                 name="Inventory"
                 component={InventoryListScreen}
                 options={{ title: 'Equipment Inventory' }}
             />
-            <EquipmentStack.Screen
+            <ProcurementStack.Screen
                 name="CheckOut"
                 component={CheckOutScreen}
                 options={{ title: 'Check Out' }}
             />
-        </EquipmentStack.Navigator>
+        </ProcurementStack.Navigator>
     );
 }
 
-// Office Supplies section stack navigator
-function OfficeSuppliesNavigator() {
+// Office Inventory section stack navigator
+function OfficeInventoryNavigator() {
     return (
-        <OfficeSuppliesStack.Navigator
+        <OfficeInventoryStack.Navigator
             screenOptions={({ navigation }) => ({
                 headerStyle: {
                     backgroundColor: Colors.secondary.orange,
@@ -147,48 +149,66 @@ function OfficeSuppliesNavigator() {
                 ),
             })}
         >
-            <OfficeSuppliesStack.Screen
+            <OfficeInventoryStack.Screen
                 name="OfficeSuppliesHome"
                 component={OfficeSuppliesHomeScreen}
-                options={{ title: 'Office Supplies' }}
+                options={{ title: 'Office Inventory' }}
             />
-            <OfficeSuppliesStack.Screen
+            <OfficeInventoryStack.Screen
                 name="SupplyInventory"
                 component={SupplyInventoryScreen}
                 options={{ title: 'Supply Inventory' }}
             />
-            <OfficeSuppliesStack.Screen
+            <OfficeInventoryStack.Screen
                 name="ReceiveSupplies"
                 component={ReceiveSuppliesScreen}
                 options={{ title: 'Receive Supplies' }}
             />
-            <OfficeSuppliesStack.Screen
+            <OfficeInventoryStack.Screen
                 name="InventoryCount"
                 component={InventoryCountScreen}
                 options={{ title: 'Inventory Count' }}
             />
-            <OfficeSuppliesStack.Screen
+            <OfficeInventoryStack.Screen
                 name="ReorderAlerts"
                 component={ReorderAlertsScreen}
                 options={{ title: 'Reorder Alerts' }}
             />
-            <OfficeSuppliesStack.Screen
+            <OfficeInventoryStack.Screen
                 name="AddEditSupply"
                 component={AddEditSupplyScreen}
                 options={{ title: 'Add Supply Item' }}
             />
-            <OfficeSuppliesStack.Screen
+            <OfficeInventoryStack.Screen
                 name="UsageReports"
                 component={UsageReportsScreen}
                 options={{ title: 'Usage Reports' }}
             />
-        </OfficeSuppliesStack.Navigator>
+        </OfficeInventoryStack.Navigator>
     );
 }
 
-
-// Custom drawer content
+// Custom drawer content with permission-based navigation
 function CustomDrawerContent(props: any) {
+    const { updateUserSettings } = useAuth();
+    const { isAdmin, labels } = useRole();
+    const [procurementExpanded, setProcurementExpanded] = React.useState(true);
+    const [inventoryExpanded, setInventoryExpanded] = React.useState(true);
+
+    // Check permissions
+    const hasProcurementAccess = isAdmin || labels.includes('procurement');
+    const hasInventoryAccess = isAdmin || labels.includes('inventory');
+
+    // Save last section when navigating
+    const handleNavigation = async (route: string, section: 'procurement' | 'inventory') => {
+        props.navigation.navigate(route);
+        try {
+            await updateUserSettings({ last_section: section });
+        } catch (error) {
+            console.error('Failed to save last section:', error);
+        }
+    };
+
     return (
         <View style={styles.drawerContainer}>
             {/* Header */}
@@ -202,70 +222,150 @@ function CustomDrawerContent(props: any) {
             </View>
 
             {/* Menu Items */}
-            <View style={styles.drawerItems}>
-                {/* Dashboard */}
-                <DrawerItem
-                    label="Dashboard"
-                    icon="🏠"
-                    onPress={() => props.navigation.navigate('Dashboard')}
-                    active={props.state.index === 0}
-                />
+            <ScrollView style={styles.drawerItems} showsVerticalScrollIndicator={false}>
+                {/* Procurement Section - Only show if user has access */}
+                {hasProcurementAccess && (
+                    <View style={styles.section}>
+                        <TouchableOpacity
+                            style={styles.sectionHeader}
+                            onPress={() => setProcurementExpanded(!procurementExpanded)}
+                        >
+                            <Text style={styles.sectionTitle}>PROCUREMENT</Text>
+                            <Text style={styles.expandIcon}>{procurementExpanded ? '−' : '+'}</Text>
+                        </TouchableOpacity>
 
-                {/* Equipment Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>EQUIPMENT</Text>
-                    <DrawerItem
-                        label="Incoming Shipments"
-                        icon="📦"
-                        onPress={() => props.navigation.navigate('EquipmentStack', { screen: 'PurchaseOrders' })}
-                        active={props.state.index === 1}
-                    />
-                    <DrawerItem
-                        label="Receive Items"
-                        icon="📷"
-                        onPress={() => props.navigation.navigate('EquipmentStack', { screen: 'Receiving' })}
-                    />
-                    <DrawerItem
-                        label="Inventory"
-                        icon="📋"
-                        onPress={() => props.navigation.navigate('EquipmentStack', { screen: 'Inventory' })}
-                    />
-                    <DrawerItem
-                        label="Check Out"
-                        icon="📤"
-                        onPress={() => props.navigation.navigate('EquipmentStack', { screen: 'CheckOut' })}
-                    />
-                </View>
+                        {procurementExpanded && (
+                            <>
+                                <DrawerItem
+                                    label="Dashboard"
+                                    icon="🏠"
+                                    onPress={() => props.navigation.navigate('Dashboard')}
+                                    active={props.state.routes[props.state.index]?.name === 'Dashboard'}
+                                />
+                                <DrawerItem
+                                    label="Incoming Shipments"
+                                    icon="📦"
+                                    onPress={() => {
+                                        props.navigation.navigate('ProcurementStack', { screen: 'PurchaseOrders' });
+                                        updateUserSettings({ last_section: 'procurement' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Receive Items"
+                                    icon="📷"
+                                    onPress={() => {
+                                        props.navigation.navigate('ProcurementStack', { screen: 'Receiving' });
+                                        updateUserSettings({ last_section: 'procurement' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Equipment Inventory"
+                                    icon="📋"
+                                    onPress={() => {
+                                        props.navigation.navigate('ProcurementStack', { screen: 'Inventory' });
+                                        updateUserSettings({ last_section: 'procurement' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Check Out"
+                                    icon="📤"
+                                    onPress={() => {
+                                        props.navigation.navigate('ProcurementStack', { screen: 'CheckOut' });
+                                        updateUserSettings({ last_section: 'procurement' }).catch(console.error);
+                                    }}
+                                />
+                            </>
+                        )}
+                    </View>
+                )}
 
-                {/* Office Supplies Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>OFFICE SUPPLIES</Text>
-                    <DrawerItem
-                        label="Supply Inventory"
-                        icon="📎"
-                        onPress={() => props.navigation.navigate('OfficeSuppliesStack')}
-                        active={props.state.index === 2}
-                    />
-                    <DrawerItem
-                        label="Receive Items"
-                        icon="📦"
-                        onPress={() => props.navigation.navigate('OfficeSuppliesStack')}
-                        active={props.state.index === 3}
-                    />
-                </View>
+                {/* Office Inventory Section - Only show if user has access */}
+                {hasInventoryAccess && (
+                    <View style={styles.section}>
+                        <TouchableOpacity
+                            style={styles.sectionHeader}
+                            onPress={() => setInventoryExpanded(!inventoryExpanded)}
+                        >
+                            <Text style={styles.sectionTitle}>OFFICE INVENTORY</Text>
+                            <Text style={styles.expandIcon}>{inventoryExpanded ? '−' : '+'}</Text>
+                        </TouchableOpacity>
+
+                        {inventoryExpanded && (
+                            <>
+                                <DrawerItem
+                                    label="Dashboard"
+                                    icon="🏠"
+                                    onPress={() => {
+                                        props.navigation.navigate('OfficeInventoryStack', { screen: 'OfficeSuppliesHome' });
+                                        updateUserSettings({ last_section: 'inventory' }).catch(console.error);
+                                    }}
+                                    active={props.state.routes[props.state.index]?.name === 'OfficeInventoryStack' &&
+                                        props.state.routes[props.state.index]?.state?.routes?.[
+                                            props.state.routes[props.state.index]?.state?.index
+                                            ]?.name === 'OfficeSuppliesHome'}
+                                />
+                                <DrawerItem
+                                    label="Supply Inventory"
+                                    icon="📎"
+                                    onPress={() => {
+                                        props.navigation.navigate('OfficeInventoryStack', { screen: 'SupplyInventory' });
+                                        updateUserSettings({ last_section: 'inventory' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Receive Supplies"
+                                    icon="📥"
+                                    onPress={() => {
+                                        props.navigation.navigate('OfficeInventoryStack', { screen: 'ReceiveSupplies' });
+                                        updateUserSettings({ last_section: 'inventory' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Inventory Count"
+                                    icon="🔢"
+                                    onPress={() => {
+                                        props.navigation.navigate('OfficeInventoryStack', { screen: 'InventoryCount' });
+                                        updateUserSettings({ last_section: 'inventory' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Reorder Alerts"
+                                    icon="🔔"
+                                    onPress={() => {
+                                        props.navigation.navigate('OfficeInventoryStack', { screen: 'ReorderAlerts' });
+                                        updateUserSettings({ last_section: 'inventory' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Usage Reports"
+                                    icon="📈"
+                                    onPress={() => {
+                                        props.navigation.navigate('OfficeInventoryStack', { screen: 'UsageReports' });
+                                        updateUserSettings({ last_section: 'inventory' }).catch(console.error);
+                                    }}
+                                />
+                            </>
+                        )}
+                    </View>
+                )}
 
                 {/* Settings */}
                 <DrawerItem
                     label="Settings"
                     icon="⚙️"
                     onPress={() => props.navigation.navigate('Settings')}
-                    active={props.state.index === 3}
+                    active={props.state.index === (hasInventoryAccess && hasProcurementAccess ? 3 : 2)}
                 />
-            </View>
+            </ScrollView>
 
             {/* Footer */}
             <View style={styles.drawerFooter}>
                 <Text style={styles.footerText}>v1.0.0</Text>
+                {isAdmin && (
+                    <View style={styles.adminBadge}>
+                        <Text style={styles.adminBadgeText}>👑 Admin Access</Text>
+                    </View>
+                )}
             </View>
         </View>
     );
@@ -274,26 +374,48 @@ function CustomDrawerContent(props: any) {
 // Drawer item component
 function DrawerItem({ label, icon, onPress, active }: any) {
     return (
-        <View
+        <TouchableOpacity
             style={[
                 styles.drawerItem,
                 active && styles.drawerItemActive,
             ]}
-            onTouchEnd={onPress}
+            onPress={onPress}
         >
             <Text style={styles.drawerItemIcon}>{icon}</Text>
             <Text style={[styles.drawerItemLabel, active && styles.drawerItemLabelActive]}>
                 {label}
             </Text>
-        </View>
+        </TouchableOpacity>
     );
 }
 
 // Main drawer navigator
 function MainDrawer() {
+    const { userSettings } = useAuth();
+    const { isAdmin, labels } = useRole();
+
+    // Determine initial route based on last section and permissions
+    const getInitialRouteName = () => {
+        const lastSection = userSettings?.last_section;
+        const hasProcurementAccess = isAdmin || labels.includes('procurement');
+        const hasInventoryAccess = isAdmin || labels.includes('inventory');
+
+        if (lastSection === 'procurement' && hasProcurementAccess) {
+            return 'ProcurementStack';
+        } else if (lastSection === 'inventory' && hasInventoryAccess) {
+            return 'OfficeInventoryStack';
+        } else if (hasProcurementAccess) {
+            return 'ProcurementStack';
+        } else if (hasInventoryAccess) {
+            return 'OfficeInventoryStack';
+        }
+        return 'Dashboard';
+    };
+
     return (
         <Drawer.Navigator
             drawerContent={(props) => <CustomDrawerContent {...props} />}
+            initialRouteName={getInitialRouteName()}
             screenOptions={{
                 headerStyle: {
                     backgroundColor: Colors.primary.cyan,
@@ -320,14 +442,14 @@ function MainDrawer() {
                 options={{ title: 'Dashboard' }}
             />
             <Drawer.Screen
-                name="EquipmentStack"
-                component={EquipmentNavigator}
-                options={{ headerShown: false, title: 'Equipment' }}
+                name="ProcurementStack"
+                component={ProcurementNavigator}
+                options={{ headerShown: false, title: 'Procurement' }}
             />
             <Drawer.Screen
-                name="OfficeSuppliesStack"
-                component={OfficeSuppliesNavigator}
-                options={{ headerShown: false, title: 'Office Supplies' }}
+                name="OfficeInventoryStack"
+                component={OfficeInventoryNavigator}
+                options={{ headerShown: false, title: 'Office Inventory' }}
             />
             <Drawer.Screen
                 name="Settings"
@@ -398,12 +520,23 @@ const styles = StyleSheet.create({
         marginTop: 20,
         paddingHorizontal: 20,
     },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+    },
     sectionTitle: {
         fontSize: 12,
         fontWeight: 'bold',
         color: Colors.text.secondary,
-        marginBottom: 10,
         letterSpacing: 1,
+    },
+    expandIcon: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: Colors.text.secondary,
     },
     drawerItem: {
         flexDirection: 'row',
@@ -437,5 +570,17 @@ const styles = StyleSheet.create({
     footerText: {
         fontSize: 12,
         color: Colors.text.secondary,
+        marginBottom: 8,
+    },
+    adminBadge: {
+        backgroundColor: '#e74c3c',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    adminBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
 });

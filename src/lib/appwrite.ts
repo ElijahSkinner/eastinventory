@@ -88,6 +88,7 @@ export interface UserSettings extends Models.Document {
     role?: string;
     notifications_enabled?: boolean;
     last_login?: string;
+    last_section: string;
 }
 
 // New Type definitions for Procurement System
