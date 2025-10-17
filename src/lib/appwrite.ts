@@ -215,6 +215,8 @@ export interface OfficeSupplyItem extends Models.Document {
     reorder_point: number;
     reorder_quantity: number;
     unit_cost?: number;
+    charge_price?: number;
+    is_for_sale?: boolean;
     supplier?: string;
     supplier_sku?: string;
     location?: string;
@@ -223,7 +225,7 @@ export interface OfficeSupplyItem extends Models.Document {
 
 export interface OfficeSupplyTransaction extends Models.Document {
     supply_item_id: string;
-    transaction_type: 'received' | 'dispensed' | 'adjustment' | 'shrinkage' | 'returned';
+    transaction_type: 'received' | 'dispensed' | 'adjustment' | 'shrinkage' | 'returned' | 'inventory_count' | 'cash_count';  // Add the new types
     quantity: number;
     previous_quantity: number;
     new_quantity: number;
@@ -231,6 +233,23 @@ export interface OfficeSupplyTransaction extends Models.Document {
     transaction_date: string;
     recipient?: string;
     notes?: string;
+    unit_cost_at_transaction?: number;
+    charge_price_at_transaction?: number;
+    expected_cash?: number;
+    actual_cash?: number;
+    cash_variance?: number;
+}
+
+export function calculateInventoryVariance(
+    previousQty: number,
+    received: number,
+    actualQty: number
+): { expectedQty: number; variance: number; itemsSold: number } {
+    const expectedQty = previousQty + received;
+    const itemsSold = expectedQty - actualQty;
+    const variance = actualQty - expectedQty;
+
+    return { expectedQty, variance, itemsSold };
 }
 
 // Helper function to check if item needs reorder

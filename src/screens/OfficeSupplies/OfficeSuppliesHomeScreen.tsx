@@ -88,16 +88,16 @@ export default function OfficeSuppliesHomeScreen() {
                 <TouchableOpacity
                     style={[styles.menuCard, { backgroundColor: colors.background.primary }]}
                     activeOpacity={0.7}
-                    onPress={() => alert('Coming soon!')}
+                    onPress={() => navigation.navigate('InventoryCount' as never)}
                 >
                     <View style={styles.menuCardContent}>
-                        <Text style={styles.menuIcon}>📤</Text>
+                        <Text style={styles.menuIcon}>📊</Text>
                         <View style={styles.menuTextContainer}>
                             <Text style={[styles.menuTitle, { color: colors.primary.coolGray }]}>
-                                Dispense Supplies
+                                Inventory Count
                             </Text>
                             <Text style={[styles.menuDescription, { color: colors.text.secondary }]}>
-                                Track supplies given to staff
+                                Count items and reconcile cash
                             </Text>
                         </View>
                     </View>

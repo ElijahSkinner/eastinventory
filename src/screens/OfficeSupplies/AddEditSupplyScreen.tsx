@@ -54,6 +54,7 @@ export default function AddEditSupplyScreen() {
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     const [showUnitPicker, setShowUnitPicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [isForSale, setIsForSale] = useState(existingItem?.is_for_sale || false);
 
     const handleSubmit = async () => {
         // Validation
@@ -106,6 +107,7 @@ export default function AddEditSupplyScreen() {
                 supplier_sku: supplierSKU.trim() || undefined,
                 location: location.trim() || undefined,
                 notes: notes.trim() || undefined,
+                is_for_sale: isForSale,
             };
 
             if (isEditing && existingItem) {
@@ -306,7 +308,31 @@ export default function AddEditSupplyScreen() {
                     <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
                         Supplier Information (Optional)
                     </Text>
-
+                    {/* For Sale Toggle */}
+                    <TouchableOpacity
+                        style={styles.toggleContainer}
+                        onPress={() => setIsForSale(!isForSale)}
+                    >
+                        <View style={styles.toggleTextContainer}>
+                            <Text style={[styles.label, { color: colors.text.primary }]}>
+                                For Sale (Snacks/Drinks)
+                            </Text>
+                            <Text style={[styles.helperText, { color: colors.text.secondary }]}>
+                                Check if this item is sold (requires charge price)
+                            </Text>
+                        </View>
+                        <View
+                            style={[
+                                styles.checkbox,
+                                {
+                                    backgroundColor: isForSale ? colors.primary.cyan : colors.background.secondary,
+                                    borderColor: colors.ui.border,
+                                },
+                            ]}
+                        >
+                            {isForSale && <Text style={styles.checkmark}>✓</Text>}
+                        </View>
+                    </TouchableOpacity>
                     <Text style={[styles.label, { color: colors.text.primary }]}>
                         Unit Cost
                     </Text>
@@ -507,5 +533,33 @@ const styles = StyleSheet.create({
     buttonText: {
         fontSize: Typography.sizes.md,
         fontWeight: Typography.weights.semibold,
+    },
+    toggleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: Spacing.md,
+        marginBottom: Spacing.md,
+    },
+    toggleTextContainer: {
+        flex: 1,
+        marginRight: Spacing.md,
+    },
+    helperText: {
+        fontSize: Typography.sizes.sm,
+        marginTop: Spacing.xs,
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: BorderRadius.sm,
+        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkmark: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: Typography.weights.bold,
     },
 });

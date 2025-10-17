@@ -4,7 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator, DrawerNavigationProp } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Colors } from '../theme';
-import {Image, View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import { Image, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { OfficeSupplyItem } from '../lib/appwrite';
 
 // Import existing screens
 import HomeScreen from '../screens/HomeScreen';
@@ -21,7 +22,7 @@ import OfficeSuppliesHomeScreen from '../screens/OfficeSupplies/OfficeSuppliesHo
 import SupplyInventoryScreen from '../screens/OfficeSupplies/SupplyInventoryScreen';
 import ReceiveSuppliesScreen from '../screens/OfficeSupplies/ReceiveSuppliesScreen';
 import AddEditSupplyScreen from '../screens/OfficeSupplies/AddEditSupplyScreen';
-import { OfficeSupplyItem } from '../lib/appwrite';
+import InventoryCountScreen from '../screens/OfficeSupplies/InventoryCountScreen';
 
 export type RootStackParamList = {
     Main: undefined;
@@ -47,7 +48,7 @@ export type OfficeSuppliesStackParamList = {
     OfficeSuppliesHome: undefined;
     SupplyInventory: undefined;
     ReceiveSupplies: undefined;
-    DispenseSupplies: undefined;
+    InventoryCount: undefined;  // Changed from DispenseSupplies
     ReorderAlerts: undefined;
     AddEditSupply: { item?: OfficeSupplyItem } | undefined;
 };
@@ -61,7 +62,7 @@ const OfficeSuppliesStack = createNativeStackNavigator<OfficeSuppliesStackParamL
 function EquipmentNavigator() {
     return (
         <EquipmentStack.Navigator
-            screenOptions={({navigation}) => ({
+            screenOptions={({ navigation }) => ({
                 headerStyle: {
                     backgroundColor: Colors.primary.cyan,
                 },
@@ -72,7 +73,7 @@ function EquipmentNavigator() {
                 headerTitle: () => (
                     <Image
                         source={require('../../assets/logos/EAST_Logo_White_Horz.png')}
-                        style={{width: 140, height: 35}}
+                        style={{ width: 140, height: 35 }}
                         resizeMode="contain"
                     />
                 ),
@@ -81,9 +82,9 @@ function EquipmentNavigator() {
                         onPress={() => {
                             (navigation.getParent() as DrawerNavigationProp<DrawerParamList>)?.openDrawer();
                         }}
-                        style={{marginLeft: 15}}
+                        style={{ marginLeft: 15 }}
                     >
-                        <Text style={{color: Colors.text.white, fontSize: 24}}>☰</Text>
+                        <Text style={{ color: Colors.text.white, fontSize: 24 }}>☰</Text>
                     </TouchableOpacity>
                 ),
             })}
@@ -91,26 +92,27 @@ function EquipmentNavigator() {
             <EquipmentStack.Screen
                 name="PurchaseOrders"
                 component={PurchaseOrdersScreen}
-                options={{title: 'Incoming Shipments'}}
+                options={{ title: 'Incoming Shipments' }}
             />
             <EquipmentStack.Screen
                 name="Receiving"
                 component={ReceivingScreen}
-                options={{title: 'Receive Items'}}
+                options={{ title: 'Receive Items' }}
             />
             <EquipmentStack.Screen
                 name="Inventory"
                 component={InventoryListScreen}
-                options={{title: 'Equipment Inventory'}}
+                options={{ title: 'Equipment Inventory' }}
             />
             <EquipmentStack.Screen
                 name="CheckOut"
                 component={CheckOutScreen}
-                options={{title: 'Check Out'}}
+                options={{ title: 'Check Out' }}
             />
         </EquipmentStack.Navigator>
     );
 }
+
 // Office Supplies section stack navigator
 function OfficeSuppliesNavigator() {
     return (
@@ -156,6 +158,11 @@ function OfficeSuppliesNavigator() {
                 name="ReceiveSupplies"
                 component={ReceiveSuppliesScreen}
                 options={{ title: 'Receive Supplies' }}
+            />
+            <OfficeSuppliesStack.Screen
+                name="InventoryCount"
+                component={InventoryCountScreen}
+                options={{ title: 'Inventory Count' }}
             />
             <OfficeSuppliesStack.Screen
                 name="AddEditSupply"
