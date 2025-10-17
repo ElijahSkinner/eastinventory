@@ -274,6 +274,8 @@ export function formatQuantity(quantity: number, unit: string): string {
 // Constants
 export const SUPPLY_CATEGORIES = [
     'Paper Products',
+    'Snacks',
+    'Drinks',
     'Writing Supplies',
     'Adhesives & Tape',
     'Filing & Storage',

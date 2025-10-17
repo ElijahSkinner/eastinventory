@@ -232,6 +232,12 @@ function CustomDrawerContent(props: any) {
                         onPress={() => props.navigation.navigate('OfficeSuppliesStack')}
                         active={props.state.index === 2}
                     />
+                    <DrawerItem
+                        label="Receive Items"
+                        icon="📦"
+                        onPress={() => props.navigation.navigate('OfficeSuppliesStack')}
+                        active={props.state.index === 3}
+                    />
                 </View>
 
                 {/* Settings */}

@@ -46,6 +46,8 @@ export default function AddEditSupplyScreen() {
         existingItem?.reorder_quantity?.toString() || ''
     );
     const [unitCost, setUnitCost] = useState(existingItem?.unit_cost?.toString() || '');
+    const [chargePrice, setChargePrice] = useState(existingItem?.charge_price?.toString() || '');
+    const [isForSale, setIsForSale] = useState(existingItem?.is_for_sale || false);
     const [supplier, setSupplier] = useState(existingItem?.supplier || '');
     const [supplierSKU, setSupplierSKU] = useState(existingItem?.supplier_sku || '');
     const [location, setLocation] = useState(existingItem?.location || '');
@@ -54,7 +56,6 @@ export default function AddEditSupplyScreen() {
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     const [showUnitPicker, setShowUnitPicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [isForSale, setIsForSale] = useState(existingItem?.is_for_sale || false);
 
     const handleSubmit = async () => {
         // Validation
@@ -76,6 +77,10 @@ export default function AddEditSupplyScreen() {
         }
         if (!reorderQuantity.trim()) {
             Alert.alert('Required Field', 'Please enter a reorder quantity');
+            return;
+        }
+        if (isForSale && !chargePrice.trim()) {
+            Alert.alert('Required Field', 'Please enter a charge price for items marked for sale');
             return;
         }
 
@@ -103,11 +108,12 @@ export default function AddEditSupplyScreen() {
                 reorder_point: reorderPointNum,
                 reorder_quantity: reorderQuantityNum,
                 unit_cost: unitCost ? parseFloat(unitCost) : undefined,
+                charge_price: chargePrice ? parseFloat(chargePrice) : undefined,
+                is_for_sale: isForSale,
                 supplier: supplier.trim() || undefined,
                 supplier_sku: supplierSKU.trim() || undefined,
                 location: location.trim() || undefined,
                 notes: notes.trim() || undefined,
-                is_for_sale: isForSale,
             };
 
             if (isEditing && existingItem) {
@@ -135,6 +141,14 @@ export default function AddEditSupplyScreen() {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const calculateProfit = () => {
+        if (!unitCost || !chargePrice) return 0;
+        const cost = parseFloat(unitCost);
+        const price = parseFloat(chargePrice);
+        if (isNaN(cost) || isNaN(price)) return 0;
+        return price - cost;
     };
 
     return (
@@ -185,7 +199,7 @@ export default function AddEditSupplyScreen() {
                                 backgroundColor: colors.background.secondary,
                                 borderColor: colors.ui.border
                             }]}
-                            nestedScrollEnabled={true}  // Add this
+                            nestedScrollEnabled={true}
                         >
                             {SUPPLY_CATEGORIES.map(cat => (
                                 <TouchableOpacity
@@ -228,7 +242,7 @@ export default function AddEditSupplyScreen() {
                                 backgroundColor: colors.background.secondary,
                                 borderColor: colors.ui.border
                             }]}
-                            nestedScrollEnabled={true}  // Add this
+                            nestedScrollEnabled={true}
                         >
                             {SUPPLY_UNITS.map(u => (
                                 <TouchableOpacity
@@ -303,22 +317,25 @@ export default function AddEditSupplyScreen() {
                     />
                 </View>
 
-                {/* Supplier Section */}
+                {/* Pricing Section */}
                 <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
                     <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
-                        Supplier Information (Optional)
+                        Pricing & Sales
                     </Text>
+
                     {/* For Sale Toggle */}
                     <TouchableOpacity
-                        style={styles.toggleContainer}
+                        style={[styles.toggleContainer, {
+                            backgroundColor: isForSale ? `${colors.primary.cyan}10` : colors.background.secondary
+                        }]}
                         onPress={() => setIsForSale(!isForSale)}
                     >
                         <View style={styles.toggleTextContainer}>
-                            <Text style={[styles.label, { color: colors.text.primary }]}>
+                            <Text style={[styles.toggleLabel, { color: colors.text.primary }]}>
                                 For Sale (Snacks/Drinks)
                             </Text>
                             <Text style={[styles.helperText, { color: colors.text.secondary }]}>
-                                Check if this item is sold (requires charge price)
+                                Enable if this item is sold to staff/students
                             </Text>
                         </View>
                         <View
@@ -333,8 +350,9 @@ export default function AddEditSupplyScreen() {
                             {isForSale && <Text style={styles.checkmark}>✓</Text>}
                         </View>
                     </TouchableOpacity>
+
                     <Text style={[styles.label, { color: colors.text.primary }]}>
-                        Unit Cost
+                        Unit Cost (What we pay)
                     </Text>
                     <TextInput
                         style={[styles.input, {
@@ -348,6 +366,40 @@ export default function AddEditSupplyScreen() {
                         placeholderTextColor={colors.text.secondary}
                         keyboardType="decimal-pad"
                     />
+
+                    {isForSale && (
+                        <>
+                            <Text style={[styles.label, { color: colors.text.primary }]}>
+                                Charge Price * (What we sell for)
+                            </Text>
+                            <TextInput
+                                style={[styles.input, {
+                                    backgroundColor: colors.background.secondary,
+                                    borderColor: colors.ui.border,
+                                    color: colors.text.primary
+                                }]}
+                                value={chargePrice}
+                                onChangeText={setChargePrice}
+                                placeholder="0.00"
+                                placeholderTextColor={colors.text.secondary}
+                                keyboardType="decimal-pad"
+                            />
+                            {unitCost && chargePrice && calculateProfit() > 0 && (
+                                <View style={[styles.profitBadge, { backgroundColor: '#27ae6020', borderColor: '#27ae60' }]}>
+                                    <Text style={[styles.profitText, { color: '#27ae60' }]}>
+                                        💰 ${calculateProfit().toFixed(2)} profit per {unit}
+                                    </Text>
+                                </View>
+                            )}
+                        </>
+                    )}
+                </View>
+
+                {/* Supplier Section */}
+                <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
+                        Supplier Information (Optional)
+                    </Text>
 
                     <Text style={[styles.label, { color: colors.text.primary }]}>
                         Supplier
@@ -513,6 +565,52 @@ const styles = StyleSheet.create({
     pickerItemText: {
         fontSize: Typography.sizes.md,
     },
+    toggleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: Spacing.md,
+        marginBottom: Spacing.md,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(0, 147, 178, 0.2)',
+    },
+    toggleTextContainer: {
+        flex: 1,
+        marginRight: Spacing.md,
+    },
+    toggleLabel: {
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.semibold,
+        marginBottom: Spacing.xs / 2,
+    },
+    helperText: {
+        fontSize: Typography.sizes.sm,
+    },
+    checkbox: {
+        width: 28,
+        height: 28,
+        borderRadius: BorderRadius.sm,
+        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkmark: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: Typography.weights.bold,
+    },
+    profitBadge: {
+        marginTop: Spacing.sm,
+        padding: Spacing.sm,
+        borderRadius: BorderRadius.sm,
+        borderWidth: 1,
+    },
+    profitText: {
+        fontSize: Typography.sizes.sm,
+        fontWeight: Typography.weights.semibold,
+        textAlign: 'center',
+    },
     footer: {
         flexDirection: 'row',
         padding: Spacing.md,
@@ -533,33 +631,5 @@ const styles = StyleSheet.create({
     buttonText: {
         fontSize: Typography.sizes.md,
         fontWeight: Typography.weights.semibold,
-    },
-    toggleContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: Spacing.md,
-        marginBottom: Spacing.md,
-    },
-    toggleTextContainer: {
-        flex: 1,
-        marginRight: Spacing.md,
-    },
-    helperText: {
-        fontSize: Typography.sizes.sm,
-        marginTop: Spacing.xs,
-    },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: BorderRadius.sm,
-        borderWidth: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    checkmark: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: Typography.weights.bold,
     },
 });

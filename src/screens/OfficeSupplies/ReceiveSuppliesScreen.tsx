@@ -9,6 +9,8 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
+    Modal,
+    Pressable,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -18,7 +20,6 @@ import {
     DATABASE_ID,
     COLLECTIONS,
     OfficeSupplyItem,
-    OfficeSupplyTransaction,
 } from '../../lib/appwrite';
 import { Query, ID } from 'appwrite';
 import { Typography, Spacing, BorderRadius, Shadows } from '../../theme';
@@ -31,6 +32,8 @@ export default function ReceiveSuppliesScreen() {
     const [supplies, setSupplies] = useState<OfficeSupplyItem[]>([]);
     const [selectedSupply, setSelectedSupply] = useState<OfficeSupplyItem | null>(null);
     const [quantity, setQuantity] = useState('');
+    const [unitCost, setUnitCost] = useState('');
+    const [vendor, setVendor] = useState('');
     const [notes, setNotes] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
@@ -62,7 +65,8 @@ export default function ReceiveSuppliesScreen() {
 
     const filteredSupplies = supplies.filter(supply =>
         supply.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        supply.category.toLowerCase().includes(searchQuery.toLowerCase())
+        supply.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        supply.supplier?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const handleSubmit = async () => {
@@ -86,6 +90,7 @@ export default function ReceiveSuppliesScreen() {
         try {
             const previousQty = selectedSupply.current_quantity;
             const newQty = previousQty + quantityNum;
+            const costNum = unitCost ? parseFloat(unitCost) : undefined;
 
             // Update supply item quantity
             await databases.updateDocument(
@@ -94,6 +99,10 @@ export default function ReceiveSuppliesScreen() {
                 selectedSupply.$id,
                 {
                     current_quantity: newQty,
+                    // Optionally update unit cost if provided
+                    ...(costNum && { unit_cost: costNum }),
+                    // Optionally update vendor if provided
+                    ...(vendor.trim() && { supplier: vendor.trim() }),
                 }
             );
 
@@ -110,7 +119,8 @@ export default function ReceiveSuppliesScreen() {
                     new_quantity: newQty,
                     performed_by: user?.name || 'Unknown',
                     transaction_date: new Date().toISOString(),
-                    notes: notes.trim() || undefined,
+                    unit_cost_at_transaction: costNum,
+                    notes: notes.trim() || `Received ${quantityNum} ${selectedSupply.unit}(s) from ${vendor.trim() || 'vendor'}`,
                 }
             );
 
@@ -122,6 +132,8 @@ export default function ReceiveSuppliesScreen() {
             // Reset form
             setSelectedSupply(null);
             setQuantity('');
+            setUnitCost('');
+            setVendor('');
             setNotes('');
             setSearchQuery('');
             loadSupplies();
@@ -173,6 +185,11 @@ export default function ReceiveSuppliesScreen() {
                                     <Text style={[styles.selectedSupplyQuantity, { color: colors.secondary.orange }]}>
                                         Current: {selectedSupply.current_quantity} {selectedSupply.unit}s
                                     </Text>
+                                    {selectedSupply.supplier && (
+                                        <Text style={[styles.selectedSupplyVendor, { color: colors.text.secondary }]}>
+                                            Supplier: {selectedSupply.supplier}
+                                        </Text>
+                                    )}
                                 </View>
                                 <TouchableOpacity
                                     style={[styles.changeButton, { backgroundColor: colors.secondary.orange }]}
@@ -186,65 +203,21 @@ export default function ReceiveSuppliesScreen() {
                             </View>
                         </View>
                     ) : (
-                        <>
-                            <TouchableOpacity
-                                style={[styles.selectButton, {
-                                    backgroundColor: colors.background.secondary,
-                                    borderColor: colors.ui.border
-                                }]}
-                                onPress={() => setShowSupplyPicker(!showSupplyPicker)}
-                            >
-                                <Text style={[styles.selectButtonText, { color: colors.text.secondary }]}>
-                                    Tap to select supply item...
-                                </Text>
-                            </TouchableOpacity>
-
-                            {showSupplyPicker && (
-                                <View style={styles.pickerContainer}>
-                                    <TextInput
-                                        style={[styles.searchInput, {
-                                            backgroundColor: colors.background.secondary,
-                                            borderColor: colors.ui.border,
-                                            color: colors.text.primary
-                                        }]}
-                                        placeholder="Search supplies..."
-                                        placeholderTextColor={colors.text.secondary}
-                                        value={searchQuery}
-                                        onChangeText={setSearchQuery}
-                                    />
-
-                                    <ScrollView style={[styles.supplyList, {
-                                        backgroundColor: colors.background.secondary,
-                                        borderColor: colors.ui.border
-                                    }]}>
-                                        {filteredSupplies.map(supply => (
-                                            <TouchableOpacity
-                                                key={supply.$id}
-                                                style={[styles.supplyOption, { borderBottomColor: colors.ui.divider }]}
-                                                onPress={() => {
-                                                    setSelectedSupply(supply);
-                                                    setShowSupplyPicker(false);
-                                                    setSearchQuery('');
-                                                }}
-                                            >
-                                                <View style={styles.supplyOptionInfo}>
-                                                    <Text style={[styles.supplyOptionName, { color: colors.text.primary }]}>
-                                                        {supply.item_name}
-                                                    </Text>
-                                                    <Text style={[styles.supplyOptionCategory, { color: colors.text.secondary }]}>
-                                                        {supply.category} • {supply.current_quantity} {supply.unit}s in stock
-                                                    </Text>
-                                                </View>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </ScrollView>
-                                </View>
-                            )}
-                        </>
+                        <TouchableOpacity
+                            style={[styles.selectButton, {
+                                backgroundColor: colors.background.secondary,
+                                borderColor: colors.ui.border
+                            }]}
+                            onPress={() => setShowSupplyPicker(true)}
+                        >
+                            <Text style={[styles.selectButtonText, { color: colors.text.secondary }]}>
+                                Tap to select supply item...
+                            </Text>
+                        </TouchableOpacity>
                     )}
                 </View>
 
-                {/* Quantity Form */}
+                {/* Receiving Form */}
                 {selectedSupply && (
                     <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
                         <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
@@ -268,6 +241,37 @@ export default function ReceiveSuppliesScreen() {
                         />
 
                         <Text style={[styles.label, { color: colors.text.primary }]}>
+                            Unit Cost (Optional)
+                        </Text>
+                        <TextInput
+                            style={[styles.input, {
+                                backgroundColor: colors.background.secondary,
+                                borderColor: colors.ui.border,
+                                color: colors.text.primary
+                            }]}
+                            value={unitCost}
+                            onChangeText={setUnitCost}
+                            placeholder={selectedSupply.unit_cost ? `$${selectedSupply.unit_cost.toFixed(2)}` : '0.00'}
+                            placeholderTextColor={colors.text.secondary}
+                            keyboardType="decimal-pad"
+                        />
+
+                        <Text style={[styles.label, { color: colors.text.primary }]}>
+                            Vendor (Optional)
+                        </Text>
+                        <TextInput
+                            style={[styles.input, {
+                                backgroundColor: colors.background.secondary,
+                                borderColor: colors.ui.border,
+                                color: colors.text.primary
+                            }]}
+                            value={vendor}
+                            onChangeText={setVendor}
+                            placeholder={selectedSupply.supplier || 'Enter vendor name'}
+                            placeholderTextColor={colors.text.secondary}
+                        />
+
+                        <Text style={[styles.label, { color: colors.text.primary }]}>
                             Notes (Optional)
                         </Text>
                         <TextInput
@@ -278,7 +282,7 @@ export default function ReceiveSuppliesScreen() {
                             }]}
                             value={notes}
                             onChangeText={setNotes}
-                            placeholder="e.g., Received from Office Depot order #12345"
+                            placeholder="e.g., Invoice #12345, Order from Amazon"
                             placeholderTextColor={colors.text.secondary}
                             multiline
                             numberOfLines={3}
@@ -296,11 +300,87 @@ export default function ReceiveSuppliesScreen() {
                                 <Text style={[styles.previewValue, { color: colors.primary.cyan }]}>
                                     {selectedSupply.current_quantity + parseInt(quantity)} {selectedSupply.unit}s
                                 </Text>
+                                <Text style={[styles.previewIncrease, { color: colors.status.available }]}>
+                                    ↑ +{quantity} from receiving
+                                </Text>
                             </View>
                         )}
                     </View>
                 )}
             </ScrollView>
+
+            {/* Supply Picker Modal */}
+            <Modal
+                visible={showSupplyPicker}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowSupplyPicker(false)}
+            >
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => setShowSupplyPicker(false)}
+                >
+                    <Pressable
+                        style={[styles.modalContainer, { backgroundColor: colors.background.primary }]}
+                        onPress={(e) => e.stopPropagation()}
+                    >
+                        <View style={[styles.modalHeader, { borderBottomColor: colors.ui.border }]}>
+                            <Text style={[styles.modalTitle, { color: colors.primary.coolGray }]}>
+                                Select Supply Item
+                            </Text>
+                            <TouchableOpacity
+                                onPress={() => setShowSupplyPicker(false)}
+                                style={styles.closeButton}
+                            >
+                                <Text style={[styles.closeButtonText, { color: colors.text.secondary }]}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.searchContainer}>
+                            <TextInput
+                                style={[styles.searchInput, {
+                                    backgroundColor: colors.background.secondary,
+                                    color: colors.text.primary,
+                                    borderColor: colors.ui.border
+                                }]}
+                                placeholder="Search supplies..."
+                                placeholderTextColor={colors.text.secondary}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
+                        </View>
+
+                        <ScrollView style={styles.modalContent}>
+                            {filteredSupplies.map(supply => (
+                                <TouchableOpacity
+                                    key={supply.$id}
+                                    style={[styles.supplyOption, { borderBottomColor: colors.ui.divider }]}
+                                    onPress={() => {
+                                        setSelectedSupply(supply);
+                                        setVendor(supply.supplier || '');
+                                        setShowSupplyPicker(false);
+                                        setSearchQuery('');
+                                    }}
+                                >
+                                    <View style={styles.supplyOptionInfo}>
+                                        <Text style={[styles.supplyOptionName, { color: colors.text.primary }]}>
+                                            {supply.item_name}
+                                        </Text>
+                                        <Text style={[styles.supplyOptionCategory, { color: colors.text.secondary }]}>
+                                            {supply.category} • {supply.current_quantity} {supply.unit}s in stock
+                                        </Text>
+                                        {supply.supplier && (
+                                            <Text style={[styles.supplyOptionVendor, { color: colors.text.secondary }]}>
+                                                Supplier: {supply.supplier}
+                                            </Text>
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </Pressable>
+                </Pressable>
+            </Modal>
 
             {/* Submit Button */}
             {selectedSupply && (
@@ -389,6 +469,10 @@ const styles = StyleSheet.create({
     selectedSupplyQuantity: {
         fontSize: Typography.sizes.md,
         fontWeight: Typography.weights.semibold,
+        marginBottom: Spacing.xs / 2,
+    },
+    selectedSupplyVendor: {
+        fontSize: Typography.sizes.sm,
     },
     changeButton: {
         paddingHorizontal: Spacing.md,
@@ -400,36 +484,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: Typography.sizes.sm,
         fontWeight: Typography.weights.semibold,
-    },
-    pickerContainer: {
-        marginTop: Spacing.md,
-    },
-    searchInput: {
-        borderWidth: 1,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.md,
-        fontSize: Typography.sizes.md,
-        marginBottom: Spacing.sm,
-    },
-    supplyList: {
-        maxHeight: 300,
-        borderWidth: 1,
-        borderRadius: BorderRadius.md,
-    },
-    supplyOption: {
-        padding: Spacing.md,
-        borderBottomWidth: 1,
-    },
-    supplyOptionInfo: {
-        flex: 1,
-    },
-    supplyOptionName: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.semibold,
-        marginBottom: Spacing.xs / 2,
-    },
-    supplyOptionCategory: {
-        fontSize: Typography.sizes.sm,
     },
     label: {
         fontSize: Typography.sizes.md,
@@ -461,6 +515,70 @@ const styles = StyleSheet.create({
     previewValue: {
         fontSize: Typography.sizes.xl,
         fontWeight: Typography.weights.bold,
+        marginBottom: Spacing.xs / 2,
+    },
+    previewIncrease: {
+        fontSize: Typography.sizes.sm,
+        fontWeight: Typography.weights.semibold,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContainer: {
+        maxHeight: '80%',
+        borderTopLeftRadius: BorderRadius.xl,
+        borderTopRightRadius: BorderRadius.xl,
+        ...Shadows.lg,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: Spacing.lg,
+        borderBottomWidth: 1,
+    },
+    modalTitle: {
+        fontSize: Typography.sizes.xl,
+        fontWeight: Typography.weights.bold,
+    },
+    closeButton: {
+        padding: Spacing.xs,
+    },
+    closeButtonText: {
+        fontSize: 24,
+    },
+    searchContainer: {
+        padding: Spacing.md,
+    },
+    searchInput: {
+        borderWidth: 1,
+        borderRadius: BorderRadius.md,
+        padding: Spacing.md,
+        fontSize: Typography.sizes.md,
+    },
+    modalContent: {
+        maxHeight: 400,
+    },
+    supplyOption: {
+        padding: Spacing.md,
+        borderBottomWidth: 1,
+    },
+    supplyOptionInfo: {
+        flex: 1,
+    },
+    supplyOptionName: {
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.semibold,
+        marginBottom: Spacing.xs / 2,
+    },
+    supplyOptionCategory: {
+        fontSize: Typography.sizes.sm,
+        marginBottom: Spacing.xs / 2,
+    },
+    supplyOptionVendor: {
+        fontSize: Typography.sizes.sm,
     },
     footer: {
         padding: Spacing.md,

@@ -132,7 +132,7 @@ export default function OfficeSuppliesHomeScreen() {
                     onPress={() => alert('Coming soon!')}
                 >
                     <View style={styles.menuCardContent}>
-                        <Text style={styles.menuIcon}>📊</Text>
+                        <Text style={styles.menuIcon}>📈</Text>
                         <View style={styles.menuTextContainer}>
                             <Text style={[styles.menuTitle, { color: colors.primary.coolGray }]}>
                                 Usage Reports

@@ -29,10 +29,13 @@ interface CountItem extends OfficeSupplyItem {
     variance?: number;
 }
 
+type TabType = 'supplies' | 'snacks';
+
 export default function InventoryCountScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
 
+    const [activeTab, setActiveTab] = useState<TabType>('supplies');
     const [supplies, setSupplies] = useState<CountItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -42,20 +45,25 @@ export default function InventoryCountScreen() {
     useFocusEffect(
         useCallback(() => {
             loadSupplies();
-        }, [])
+        }, [activeTab])
     );
 
     const loadSupplies = async () => {
         try {
             setLoading(true);
+            const queries = [Query.orderAsc('category'), Query.limit(1000)];
+
+            // Filter based on active tab
+            if (activeTab === 'snacks') {
+                queries.push(Query.equal('is_for_sale', true));
+            } else {
+                queries.push(Query.equal('is_for_sale', false));
+            }
+
             const response = await databases.listDocuments(
                 DATABASE_ID,
                 COLLECTIONS.OFFICE_SUPPLY_ITEMS,
-                [
-                    Query.equal('is_for_sale', true),  // Only load items marked for sale
-                    Query.orderAsc('item_name'),
-                    Query.limit(1000)
-                ]
+                queries
             );
             setSupplies(response.documents as unknown as CountItem[]);
         } catch (error) {
@@ -76,7 +84,7 @@ export default function InventoryCountScreen() {
                     }
 
                     const itemsSold = item.current_quantity - actualCount;
-                    const expectedRevenue = itemsSold * (item.charge_price || 0);
+                    const expectedRevenue = item.is_for_sale ? itemsSold * (item.charge_price || 0) : 0;
                     const variance = actualCount - item.current_quantity;
 
                     return {
@@ -92,19 +100,34 @@ export default function InventoryCountScreen() {
         );
     };
 
+    const getFilteredSupplies = () => {
+        return supplies; // Already filtered by query
+    };
+
     const calculateTotals = () => {
         const itemsWithCounts = supplies.filter(s => s.actualCount !== undefined);
-        const totalItemsSold = itemsWithCounts.reduce((sum, s) => sum + (s.itemsSold || 0), 0);
-        const totalExpectedRevenue = itemsWithCounts.reduce((sum, s) => sum + (s.expectedRevenue || 0), 0);
-        const totalShrinkage = itemsWithCounts.reduce((sum, s) => sum + Math.abs(Math.min(s.variance || 0, 0)), 0);
-        const totalOverage = itemsWithCounts.reduce((sum, s) => sum + Math.max(s.variance || 0, 0), 0);
+
+        if (activeTab === 'snacks') {
+            const totalItemsSold = itemsWithCounts.reduce((sum, s) => sum + (s.itemsSold || 0), 0);
+            const totalExpectedRevenue = itemsWithCounts.reduce((sum, s) => sum + (s.expectedRevenue || 0), 0);
+            const totalShrinkage = itemsWithCounts.reduce((sum, s) => sum + Math.abs(Math.min(s.variance || 0, 0)), 0);
+            const totalOverage = itemsWithCounts.reduce((sum, s) => sum + Math.max(s.variance || 0, 0), 0);
+
+            return {
+                itemsWithCounts: itemsWithCounts.length,
+                totalItemsSold,
+                totalExpectedRevenue,
+                totalShrinkage,
+                totalOverage,
+            };
+        }
 
         return {
             itemsWithCounts: itemsWithCounts.length,
-            totalItemsSold,
-            totalExpectedRevenue,
-            totalShrinkage,
-            totalOverage,
+            totalItemsSold: 0,
+            totalExpectedRevenue: 0,
+            totalShrinkage: 0,
+            totalOverage: 0,
         };
     };
 
@@ -116,40 +139,60 @@ export default function InventoryCountScreen() {
             return;
         }
 
-        if (!actualCash.trim()) {
-            Alert.alert('Cash Count Required', 'Please enter the actual cash amount in the box.');
-            return;
-        }
-
-        const actualCashNum = parseFloat(actualCash);
-        if (isNaN(actualCashNum) || actualCashNum < 0) {
-            Alert.alert('Invalid Amount', 'Please enter a valid cash amount.');
-            return;
-        }
-
         const totals = calculateTotals();
-        const cashVariance = actualCashNum - totals.totalExpectedRevenue;
 
-        const confirmMessage =
-            `Snack Inventory Count Summary:\n\n` +
-            `Items Counted: ${totals.itemsWithCounts} of ${supplies.length}\n` +
-            `Items Sold: ${totals.totalItemsSold}\n` +
-            `Expected Revenue: $${totals.totalExpectedRevenue.toFixed(2)}\n` +
-            `Actual Cash: $${actualCashNum.toFixed(2)}\n` +
-            `Cash Variance: $${cashVariance.toFixed(2)} ${cashVariance >= 0 ? '(Over)' : '(Short)'}\n\n` +
-            `Shrinkage: ${totals.totalShrinkage} items\n` +
-            `Overage: ${totals.totalOverage} items\n\n` +
-            `Submit this count?`;
+        if (activeTab === 'snacks') {
+            // Require cash count for snacks
+            if (!actualCash.trim()) {
+                Alert.alert('Cash Count Required', 'Please enter the actual cash amount in the box.');
+                return;
+            }
 
-        Alert.alert('Confirm Count', confirmMessage, [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Submit',
-                onPress: async () => {
-                    await processInventoryCount(itemsWithCounts, totals, actualCashNum, cashVariance);
-                }
-            },
-        ]);
+            const actualCashNum = parseFloat(actualCash);
+            if (isNaN(actualCashNum) || actualCashNum < 0) {
+                Alert.alert('Invalid Amount', 'Please enter a valid cash amount.');
+                return;
+            }
+
+            const cashVariance = actualCashNum - totals.totalExpectedRevenue;
+
+            const confirmMessage =
+                `Snack Inventory Count Summary:\n\n` +
+                `Items Counted: ${totals.itemsWithCounts} of ${supplies.length}\n` +
+                `Items Sold: ${totals.totalItemsSold}\n` +
+                `Expected Revenue: ${totals.totalExpectedRevenue.toFixed(2)}\n` +
+                `Actual Cash: ${actualCashNum.toFixed(2)}\n` +
+                `Cash Variance: ${cashVariance.toFixed(2)} ${cashVariance >= 0 ? '(Over)' : '(Short)'}\n\n` +
+                `Shrinkage: ${totals.totalShrinkage} items\n` +
+                `Overage: ${totals.totalOverage} items\n\n` +
+                `Submit this count?`;
+
+            Alert.alert('Confirm Count', confirmMessage, [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Submit',
+                    onPress: async () => {
+                        await processInventoryCount(itemsWithCounts, totals, actualCashNum, cashVariance);
+                    }
+                },
+            ]);
+        } else {
+            // Office supplies - simpler confirmation
+            const confirmMessage =
+                `Office Supply Count Summary:\n\n` +
+                `Items Counted: ${totals.itemsWithCounts} of ${supplies.length}\n\n` +
+                `Submit this count?`;
+
+            Alert.alert('Confirm Count', confirmMessage, [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Submit',
+                    onPress: async () => {
+                        await processInventoryCount(itemsWithCounts, totals, 0, 0);
+                    }
+                },
+            ]);
+        }
     };
 
     const processInventoryCount = async (
@@ -189,12 +232,14 @@ export default function InventoryCountScreen() {
                         unit_cost_at_transaction: item.unit_cost,
                         charge_price_at_transaction: item.charge_price,
                         expected_cash: item.expectedRevenue,
-                        notes: `Inventory count - ${item.itemsSold} sold, ${item.variance} variance`,
+                        notes: activeTab === 'snacks'
+                            ? `Snack count - ${item.itemsSold} sold, ${item.variance} variance`
+                            : `Supply count - ${item.variance} variance`,
                     }
                 );
 
-                // If there's shrinkage (negative variance), create shrinkage transaction
-                if (item.variance && item.variance < 0) {
+                // Only track shrinkage for snacks
+                if (activeTab === 'snacks' && item.variance && item.variance < 0) {
                     await databases.createDocument(
                         DATABASE_ID,
                         COLLECTIONS.OFFICE_SUPPLY_TRANSACTIONS,
@@ -215,8 +260,8 @@ export default function InventoryCountScreen() {
                 }
             }
 
-            // Create ONE cash reconciliation transaction using the first item as reference
-            if (itemsWithCounts.length > 0) {
+            // Create ONE cash reconciliation transaction only for snacks
+            if (activeTab === 'snacks' && itemsWithCounts.length > 0) {
                 const referenceItem = itemsWithCounts[0];
                 const itemsList = itemsWithCounts.map(i => `${i.item_name} (${i.itemsSold})`).join(', ');
 
@@ -225,7 +270,7 @@ export default function InventoryCountScreen() {
                     COLLECTIONS.OFFICE_SUPPLY_TRANSACTIONS,
                     ID.unique(),
                     {
-                        supply_item_id: referenceItem.$id,  // Use first item as reference
+                        supply_item_id: referenceItem.$id,
                         transaction_type: 'cash_count',
                         quantity: totals.totalItemsSold,
                         previous_quantity: 0,
@@ -240,12 +285,13 @@ export default function InventoryCountScreen() {
                 );
             }
 
-            Alert.alert(
-                'Count Submitted!',
-                `Inventory count completed successfully.\n\n` +
-                `${totals.itemsWithCounts} items updated\n` +
-                `Cash variance: $${cashVariance.toFixed(2)}`
-            );
+            let successMessage = `${activeTab === 'snacks' ? 'Snack' : 'Supply'} count completed successfully.\n\n${totals.itemsWithCounts} items updated`;
+
+            if (activeTab === 'snacks') {
+                successMessage += `\nCash variance: ${cashVariance.toFixed(2)}`;
+            }
+
+            Alert.alert('Count Submitted!', successMessage);
 
             // Reset form
             setActualCash('');
@@ -263,6 +309,7 @@ export default function InventoryCountScreen() {
     const totals = calculateTotals();
     const actualCashNum = parseFloat(actualCash) || 0;
     const cashVariance = actualCashNum - totals.totalExpectedRevenue;
+    const filteredSupplies = getFilteredSupplies();
 
     if (loading) {
         return (
@@ -274,19 +321,59 @@ export default function InventoryCountScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+            {/* Tabs */}
+            <View style={[styles.tabContainer, { backgroundColor: colors.background.primary }]}>
+                <TouchableOpacity
+                    style={[
+                        styles.tab,
+                        activeTab === 'supplies' && { borderBottomColor: colors.secondary.orange, borderBottomWidth: 3 },
+                    ]}
+                    onPress={() => setActiveTab('supplies')}
+                >
+                    <Text
+                        style={[
+                            styles.tabText,
+                            { color: activeTab === 'supplies' ? colors.secondary.orange : colors.text.secondary },
+                        ]}
+                    >
+                        Office Supplies
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.tab,
+                        activeTab === 'snacks' && { borderBottomColor: colors.secondary.orange, borderBottomWidth: 3 },
+                    ]}
+                    onPress={() => setActiveTab('snacks')}
+                >
+                    <Text
+                        style={[
+                            styles.tabText,
+                            { color: activeTab === 'snacks' ? colors.secondary.orange : colors.text.secondary },
+                        ]}
+                    >
+                        Snacks & Drinks
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
             <ScrollView style={styles.content}>
                 {/* Instructions */}
                 <View style={[styles.infoCard, { backgroundColor: colors.primary.cyan + '20' }]}>
                     <Text style={[styles.infoText, { color: colors.text.primary }]}>
-                        🍿 Count snacks & drinks, then reconcile cash
+                        {activeTab === 'supplies'
+                            ? '📋 Count office supplies to maintain accurate inventory levels'
+                            : '🍿 Count snacks & drinks, then reconcile cash'}
                     </Text>
                 </View>
 
-                {supplies.length === 0 ? (
+                {filteredSupplies.length === 0 ? (
                     <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
                         <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-                            No items marked for sale yet.{'\n\n'}
-                            Add snacks/drinks and mark them as "For Sale" when creating them.
+                            {activeTab === 'snacks'
+                                ? 'No snacks or drinks marked for sale yet.\n\nAdd items and mark them as "For Sale" when creating them.'
+                                : 'No office supply items found.'}
                         </Text>
                     </View>
                 ) : (
@@ -294,10 +381,10 @@ export default function InventoryCountScreen() {
                         {/* Count Items */}
                         <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
                             <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
-                                Count Snacks & Drinks
+                                Count Items
                             </Text>
 
-                            {supplies.map(item => (
+                            {filteredSupplies.map(item => (
                                 <View key={item.$id} style={[styles.countItem, { borderBottomColor: colors.ui.divider }]}>
                                     <View style={styles.countItemInfo}>
                                         <Text style={[styles.countItemName, { color: colors.text.primary }]}>
@@ -305,13 +392,15 @@ export default function InventoryCountScreen() {
                                         </Text>
                                         <Text style={[styles.countItemCurrent, { color: colors.text.secondary }]}>
                                             System: {item.current_quantity} {item.unit}s
-                                            {item.charge_price && ` • $${item.charge_price.toFixed(2)} each`}
+                                            {activeTab === 'snacks' && item.charge_price && ` • ${item.charge_price.toFixed(2)} each`}
                                         </Text>
                                         {item.actualCount !== undefined && (
                                             <>
-                                                <Text style={[styles.countItemSold, { color: colors.primary.cyan }]}>
-                                                    Sold: {item.itemsSold} • Revenue: ${item.expectedRevenue?.toFixed(2)}
-                                                </Text>
+                                                {activeTab === 'snacks' && (
+                                                    <Text style={[styles.countItemSold, { color: colors.primary.cyan }]}>
+                                                        Sold: {item.itemsSold} • Revenue: ${item.expectedRevenue?.toFixed(2)}
+                                                    </Text>
+                                                )}
                                                 {item.variance !== 0 && (
                                                     <Text style={[
                                                         styles.countItemVariance,
@@ -339,8 +428,8 @@ export default function InventoryCountScreen() {
                             ))}
                         </View>
 
-                        {/* Cash Count */}
-                        {totals.itemsWithCounts > 0 && (
+                        {/* Cash Count - Only for snacks */}
+                        {totals.itemsWithCounts > 0 && activeTab === 'snacks' && (
                             <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
                                 <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
                                     Cash Reconciliation
@@ -477,6 +566,19 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    tabContainer: {
+        flexDirection: 'row',
+        ...Shadows.sm,
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: Spacing.md,
+        alignItems: 'center',
+    },
+    tabText: {
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.semibold,
+    },
     content: {
         flex: 1,
     },
@@ -517,10 +619,24 @@ const styles = StyleSheet.create({
         flex: 1,
         marginRight: Spacing.md,
     },
+    itemHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.xs,
+        marginBottom: Spacing.xs / 2,
+    },
     countItemName: {
         fontSize: Typography.sizes.md,
         fontWeight: Typography.weights.semibold,
-        marginBottom: Spacing.xs / 2,
+    },
+    forSaleBadge: {
+        paddingHorizontal: Spacing.xs,
+        paddingVertical: 2,
+        borderRadius: BorderRadius.sm,
+    },
+    forSaleBadgeText: {
+        fontSize: Typography.sizes.xs,
+        fontWeight: Typography.weights.bold,
     },
     countItemCurrent: {
         fontSize: Typography.sizes.sm,
