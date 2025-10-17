@@ -69,6 +69,7 @@ export default function ReceiveSuppliesScreen() {
         supply.supplier?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+
     const handleSubmit = async () => {
         if (!selectedSupply) {
             Alert.alert('Required', 'Please select a supply item');
@@ -92,6 +93,12 @@ export default function ReceiveSuppliesScreen() {
             const newQty = previousQty + quantityNum;
             const costNum = unitCost ? parseFloat(unitCost) : undefined;
 
+            console.log('📦 Receiving supplies:');
+            console.log('  - Item:', selectedSupply.item_name);
+            console.log('  - Item ID:', selectedSupply.$id);  // ✅ This is what we'll use for supply_item_id
+            console.log('  - Previous qty:', previousQty);
+            console.log('  - New qty:', newQty);
+
             // Update supply item quantity
             await databases.updateDocument(
                 DATABASE_ID,
@@ -106,23 +113,28 @@ export default function ReceiveSuppliesScreen() {
                 }
             );
 
+            console.log('✅ Updated item quantity');
+
             // Log transaction
+            // ✅ FIX: Use selectedSupply.$id for supply_item_id
             await databases.createDocument(
                 DATABASE_ID,
                 COLLECTIONS.OFFICE_SUPPLY_TRANSACTIONS,
                 ID.unique(),
                 {
-                    supply_item_id: selectedSupply.$id,
+                    supply_item_id: selectedSupply.$id,  // ✅ This is the document ID from office_supply_items
                     transaction_type: 'received',
                     quantity: quantityNum,
                     previous_quantity: previousQty,
                     new_quantity: newQty,
                     performed_by: user?.name || 'Unknown',
                     transaction_date: new Date().toISOString(),
-                    unit_cost_at_transaction: costNum,
+                    unit_cost_at_transaction: costNum || undefined,
                     notes: notes.trim() || `Received ${quantityNum} ${selectedSupply.unit}(s) from ${vendor.trim() || 'vendor'}`,
                 }
             );
+
+            console.log('✅ Created transaction');
 
             Alert.alert(
                 'Success!',
@@ -137,9 +149,10 @@ export default function ReceiveSuppliesScreen() {
             setNotes('');
             setSearchQuery('');
             loadSupplies();
-        } catch (error) {
-            console.error('Error receiving supplies:', error);
-            Alert.alert('Error', 'Failed to receive supplies. Please try again.');
+        } catch (error: any) {
+            console.error('❌ Error receiving supplies:', error);
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            Alert.alert('Error', `Failed to receive supplies: ${error.message || 'Unknown error'}\n\nPlease check the console for details.`);
         } finally {
             setSubmitting(false);
         }

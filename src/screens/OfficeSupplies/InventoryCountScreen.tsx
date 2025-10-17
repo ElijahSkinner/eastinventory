@@ -217,21 +217,22 @@ export default function InventoryCountScreen() {
                 );
 
                 // Create inventory count transaction
+                // ✅ FIX: Ensure all required fields are provided
                 await databases.createDocument(
                     DATABASE_ID,
                     COLLECTIONS.OFFICE_SUPPLY_TRANSACTIONS,
                     ID.unique(),
                     {
-                        supply_item_id: item.$id,
+                        supply_item_id: item.$id,  // ✅ This is the correct field
                         transaction_type: 'inventory_count',
                         quantity: item.itemsSold || 0,
                         previous_quantity: item.current_quantity,
                         new_quantity: item.actualCount!,
                         performed_by: user?.name || 'Unknown',
                         transaction_date: new Date().toISOString(),
-                        unit_cost_at_transaction: item.unit_cost,
-                        charge_price_at_transaction: item.charge_price,
-                        expected_cash: item.expectedRevenue,
+                        unit_cost_at_transaction: item.unit_cost || undefined,
+                        charge_price_at_transaction: item.charge_price || undefined,
+                        expected_cash: item.expectedRevenue || undefined,
                         notes: activeTab === 'snacks'
                             ? `Snack count - ${item.itemsSold} sold, ${item.variance} variance`
                             : `Supply count - ${item.variance} variance`,
@@ -245,15 +246,15 @@ export default function InventoryCountScreen() {
                         COLLECTIONS.OFFICE_SUPPLY_TRANSACTIONS,
                         ID.unique(),
                         {
-                            supply_item_id: item.$id,
+                            supply_item_id: item.$id,  // ✅ This is the correct field
                             transaction_type: 'shrinkage',
                             quantity: Math.abs(item.variance),
                             previous_quantity: item.current_quantity,
                             new_quantity: item.actualCount!,
                             performed_by: user?.name || 'Unknown',
                             transaction_date: new Date().toISOString(),
-                            unit_cost_at_transaction: item.unit_cost,
-                            charge_price_at_transaction: item.charge_price,
+                            unit_cost_at_transaction: item.unit_cost || undefined,
+                            charge_price_at_transaction: item.charge_price || undefined,
                             notes: `Shrinkage detected: ${Math.abs(item.variance)} items missing`,
                         }
                     );
@@ -265,21 +266,22 @@ export default function InventoryCountScreen() {
                 const referenceItem = itemsWithCounts[0];
                 const itemsList = itemsWithCounts.map(i => `${i.item_name} (${i.itemsSold})`).join(', ');
 
+                // ✅ FIX: Use a valid supply_item_id from the first counted item
                 await databases.createDocument(
                     DATABASE_ID,
                     COLLECTIONS.OFFICE_SUPPLY_TRANSACTIONS,
                     ID.unique(),
                     {
-                        supply_item_id: referenceItem.$id,
+                        supply_item_id: referenceItem.$id,  // ✅ Use first item as reference
                         transaction_type: 'cash_count',
                         quantity: totals.totalItemsSold,
                         previous_quantity: 0,
                         new_quantity: 0,
                         performed_by: user?.name || 'Unknown',
                         transaction_date: new Date().toISOString(),
-                        expected_cash: totals.totalExpectedRevenue,
-                        actual_cash: actualCashNum,
-                        cash_variance: cashVariance,
+                        expected_cash: totals.totalExpectedRevenue || undefined,
+                        actual_cash: actualCashNum || undefined,
+                        cash_variance: cashVariance || undefined,
                         notes: `Cash reconciliation - Items: ${itemsList}. ${notes.trim()}`,
                     }
                 );
@@ -288,7 +290,7 @@ export default function InventoryCountScreen() {
             let successMessage = `${activeTab === 'snacks' ? 'Snack' : 'Supply'} count completed successfully.\n\n${totals.itemsWithCounts} items updated`;
 
             if (activeTab === 'snacks') {
-                successMessage += `\nCash variance: ${cashVariance.toFixed(2)}`;
+                successMessage += `\nCash variance: $${cashVariance.toFixed(2)}`;
             }
 
             Alert.alert('Count Submitted!', successMessage);
@@ -300,7 +302,9 @@ export default function InventoryCountScreen() {
 
         } catch (error: any) {
             console.error('Error processing count:', error);
-            Alert.alert('Error', `Failed to process inventory count: ${error.message}`);
+            // ✅ Better error handling to see what went wrong
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            Alert.alert('Error', `Failed to process inventory count: ${error.message || 'Unknown error'}`);
         } finally {
             setSubmitting(false);
         }

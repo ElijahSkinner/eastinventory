@@ -44,7 +44,6 @@ export default function OfficeSuppliesHomeScreen() {
                     </View>
                 </View>
             </View>
-
             {/* Menu Options */}
             <View style={styles.menuContainer}>
                 <TouchableOpacity
@@ -69,10 +68,10 @@ export default function OfficeSuppliesHomeScreen() {
                 <TouchableOpacity
                     style={[styles.menuCard, { backgroundColor: colors.background.primary }]}
                     activeOpacity={0.7}
-                    onPress={() => alert('Coming soon!')}
+                    onPress={() => navigation.navigate('ReceiveSupplies' as never)}
                 >
                     <View style={styles.menuCardContent}>
-                        <Text style={styles.menuIcon}>📦</Text>
+                        <Text style={styles.menuIcon}>📥</Text>
                         <View style={styles.menuTextContainer}>
                             <Text style={[styles.menuTitle, { color: colors.primary.coolGray }]}>
                                 Receive Supplies
@@ -91,7 +90,7 @@ export default function OfficeSuppliesHomeScreen() {
                     onPress={() => navigation.navigate('InventoryCount' as never)}
                 >
                     <View style={styles.menuCardContent}>
-                        <Text style={styles.menuIcon}>📊</Text>
+                        <Text style={styles.menuIcon}>🔢</Text>
                         <View style={styles.menuTextContainer}>
                             <Text style={[styles.menuTitle, { color: colors.primary.coolGray }]}>
                                 Inventory Count
@@ -107,7 +106,7 @@ export default function OfficeSuppliesHomeScreen() {
                 <TouchableOpacity
                     style={[styles.menuCard, { backgroundColor: colors.background.primary }]}
                     activeOpacity={0.7}
-                    onPress={() => alert('Coming soon!')}
+                    onPress={() => navigation.navigate('ReorderAlerts' as never)}
                 >
                     <View style={styles.menuCardContent}>
                         <Text style={styles.menuIcon}>🔔</Text>
@@ -129,7 +128,7 @@ export default function OfficeSuppliesHomeScreen() {
                 <TouchableOpacity
                     style={[styles.menuCard, { backgroundColor: colors.background.primary }]}
                     activeOpacity={0.7}
-                    onPress={() => alert('Coming soon!')}
+                    onPress={() => navigation.navigate('UsageReports' as never)}  // ← Remove the alert
                 >
                     <View style={styles.menuCardContent}>
                         <Text style={styles.menuIcon}>📈</Text>
@@ -138,7 +137,7 @@ export default function OfficeSuppliesHomeScreen() {
                                 Usage Reports
                             </Text>
                             <Text style={[styles.menuDescription, { color: colors.text.secondary }]}>
-                                Consumption trends and shrinkage
+                                Consumption trends and analytics
                             </Text>
                         </View>
                     </View>

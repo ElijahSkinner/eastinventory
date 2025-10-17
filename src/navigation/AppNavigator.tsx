@@ -23,6 +23,8 @@ import SupplyInventoryScreen from '../screens/OfficeSupplies/SupplyInventoryScre
 import ReceiveSuppliesScreen from '../screens/OfficeSupplies/ReceiveSuppliesScreen';
 import AddEditSupplyScreen from '../screens/OfficeSupplies/AddEditSupplyScreen';
 import InventoryCountScreen from '../screens/OfficeSupplies/InventoryCountScreen';
+import ReorderAlertsScreen from "@/src/screens/OfficeSupplies/ReorderAlertsScreen";
+import UsageReportsScreen from "@/src/screens/OfficeSupplies/usageReportsScreen";
 
 export type RootStackParamList = {
     Main: undefined;
@@ -48,8 +50,9 @@ export type OfficeSuppliesStackParamList = {
     OfficeSuppliesHome: undefined;
     SupplyInventory: undefined;
     ReceiveSupplies: undefined;
-    InventoryCount: undefined;  // Changed from DispenseSupplies
+    InventoryCount: undefined;
     ReorderAlerts: undefined;
+    UsageReports: undefined;
     AddEditSupply: { item?: OfficeSupplyItem } | undefined;
 };
 
@@ -165,13 +168,24 @@ function OfficeSuppliesNavigator() {
                 options={{ title: 'Inventory Count' }}
             />
             <OfficeSuppliesStack.Screen
+                name="ReorderAlerts"
+                component={ReorderAlertsScreen}
+                options={{ title: 'Reorder Alerts' }}
+            />
+            <OfficeSuppliesStack.Screen
                 name="AddEditSupply"
                 component={AddEditSupplyScreen}
                 options={{ title: 'Add Supply Item' }}
             />
+            <OfficeSuppliesStack.Screen
+                name="UsageReports"
+                component={UsageReportsScreen}
+                options={{ title: 'Usage Reports' }}
+            />
         </OfficeSuppliesStack.Navigator>
     );
 }
+
 
 // Custom drawer content
 function CustomDrawerContent(props: any) {
