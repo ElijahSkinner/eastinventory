@@ -1,5 +1,5 @@
 // src/screens/InventoryListScreen.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
     View,
@@ -25,9 +25,19 @@ interface ItemTypeWithCounts extends ItemType {
     installedCount: number;
     maintenanceCount: number;
     totalCount: number;
+    items?: InventoryItem[]; // Cache items for this type
 }
 
 type TabType = 'all' | 'in-stock' | 'installed';
+
+// Cache configuration
+const CACHE_DURATION = 30000; // 30 seconds
+
+interface CacheData {
+    itemTypes: ItemTypeWithCounts[];
+    allItems: InventoryItem[];
+    timestamp: number;
+}
 
 export default function InventoryListScreen() {
     const { colors } = useTheme();
@@ -35,13 +45,20 @@ export default function InventoryListScreen() {
 
     const [activeTab, setActiveTab] = useState<TabType>('in-stock');
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchInput, setSearchInput] = useState('');
     const [itemTypes, setItemTypes] = useState<ItemTypeWithCounts[]>([]);
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
     const [expandedItems, setExpandedItems] = useState<InventoryItem[]>([]);
     const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [loadingExpanded, setLoadingExpanded] = useState(false);
+    const [searching, setSearching] = useState(false);
+
+    // Cache
+    const cacheRef = useRef<CacheData | null>(null);
+
+    // Debounce timer ref
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useFocusEffect(
         useCallback(() => {
@@ -49,69 +66,92 @@ export default function InventoryListScreen() {
         }, [activeTab, searchQuery])
     );
 
-    const loadItemTypes = async () => {
+    // Clear timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const loadItemTypes = async (forceRefresh = false) => {
         try {
             setLoading(true);
 
-            // Get all item types
-            const typesResponse = await databases.listDocuments(
-                DATABASE_ID,
-                COLLECTIONS.ITEM_TYPES,
-                [Query.limit(100)]
-            );
+            // Check cache first
+            const now = Date.now();
+            const cachedData = cacheRef.current;
+            const isCacheValid = cachedData &&
+                !forceRefresh &&
+                (now - cachedData.timestamp) < CACHE_DURATION;
 
-            // For each item type, get counts
-            const typesWithCounts: ItemTypeWithCounts[] = await Promise.all(
-                typesResponse.documents.map(async (itemType) => {
-                    const [available, staged, assigned, installed, maintenance] = await Promise.all([
-                        databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
-                            Query.equal('item_type_id', itemType.$id),
-                            Query.equal('status', 'available'),
-                            Query.limit(100)
-                        ]),
-                        databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
-                            Query.equal('item_type_id', itemType.$id),
-                            Query.equal('status', 'staged'),
-                            Query.limit(100)
-                        ]),
-                        databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
-                            Query.equal('item_type_id', itemType.$id),
-                            Query.equal('status', 'assigned'),
-                            Query.limit(100)
-                        ]),
-                        databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
-                            Query.equal('item_type_id', itemType.$id),
-                            Query.equal('status', 'installed'),
-                            Query.limit(100)
-                        ]),
-                        databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
-                            Query.equal('item_type_id', itemType.$id),
-                            Query.equal('status', 'maintenance'),
-                            Query.limit(100)
-                        ])
-                    ]);
+            let allItemTypes: ItemType[];
+            let allInventoryItems: InventoryItem[];
 
-                    return {
-                        ...(itemType as unknown as ItemType),
-                        availableCount: available.total,
-                        stagedCount: staged.total,
-                        assignedCount: assigned.total,  // ✅ ADD THIS
-                        installedCount: installed.total,
-                        maintenanceCount: maintenance.total,
-                        totalCount: available.total + staged.total + assigned.total + installed.total + maintenance.total,
-                    };
-                })
-            );
+            if (isCacheValid && cachedData) {
+                // Use cached data
+                allItemTypes = cachedData.itemTypes;
+                allInventoryItems = cachedData.allItems;
+            } else {
+                // Fetch fresh data - parallel queries for speed
+                const [typesResponse, itemsResponse] = await Promise.all([
+                    databases.listDocuments(
+                        DATABASE_ID,
+                        COLLECTIONS.ITEM_TYPES,
+                        [Query.limit(100)]
+                    ),
+                    databases.listDocuments(
+                        DATABASE_ID,
+                        COLLECTIONS.INVENTORY_ITEMS,
+                        [Query.limit(5000)] // Adjust based on your inventory size
+                    )
+                ]);
+
+                allItemTypes = typesResponse.documents as unknown as ItemType[];
+                allInventoryItems = itemsResponse.documents as unknown as InventoryItem[];
+
+                // Update cache
+                cacheRef.current = {
+                    itemTypes: allItemTypes as ItemTypeWithCounts[],
+                    allItems: allInventoryItems,
+                    timestamp: now
+                };
+            }
+
+            // Process data: count items for each type
+            const typesWithCounts: ItemTypeWithCounts[] = allItemTypes.map((itemType) => {
+                // Filter items for this type
+                const itemsForType = allInventoryItems.filter(
+                    item => item.item_type_id === itemType.$id
+                );
+
+                // Count by status
+                const availableCount = itemsForType.filter(i => i.status === 'available').length;
+                const stagedCount = itemsForType.filter(i => i.status === 'staged').length;
+                const assignedCount = itemsForType.filter(i => i.status === 'assigned').length;
+                const installedCount = itemsForType.filter(i => i.status === 'installed').length;
+                const maintenanceCount = itemsForType.filter(i => i.status === 'maintenance').length;
+
+                return {
+                    ...itemType,
+                    availableCount,
+                    stagedCount,
+                    assignedCount,
+                    installedCount,
+                    maintenanceCount,
+                    totalCount: itemsForType.length,
+                    items: itemsForType, // Cache items for quick access
+                };
+            });
 
             // Filter based on active tab
             let filtered = typesWithCounts;
             if (activeTab === 'in-stock') {
-                // ✅ FIX: In-stock should show available + staged (not assigned)
                 filtered = typesWithCounts.filter(
                     (item) => item.availableCount > 0 || item.stagedCount > 0
                 );
             } else if (activeTab === 'installed') {
-                // ✅ FIX: Installed should show BOTH assigned and installed
                 filtered = typesWithCounts.filter((item) =>
                     item.assignedCount > 0 || item.installedCount > 0
                 );
@@ -132,15 +172,44 @@ export default function InventoryListScreen() {
         } finally {
             setLoading(false);
             setRefreshing(false);
+            setSearching(false);
         }
+    };
+
+    // Handle search input with debouncing
+    const handleSearchChange = (text: string) => {
+        setSearchInput(text);
+
+        // Clear existing timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        // Set searching state
+        if (text !== searchQuery) {
+            setSearching(true);
+        }
+
+        // Set new timeout for debounced search
+        searchTimeoutRef.current = setTimeout(() => {
+            setSearchQuery(text);
+        }, 500); // Wait 500ms after user stops typing
+    };
+
+    // Manual search trigger
+    const handleSearchSubmit = () => {
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        setSearchQuery(searchInput);
     };
 
     const handleRefresh = useCallback(() => {
         setRefreshing(true);
-        loadItemTypes();
+        loadItemTypes(true); // Force refresh
     }, [activeTab, searchQuery]);
 
-    const handleExpandItem = async (itemTypeId: string) => {
+    const handleExpandItem = (itemTypeId: string) => {
         if (expandedItemId === itemTypeId) {
             setExpandedItemId(null);
             setExpandedItems([]);
@@ -148,41 +217,28 @@ export default function InventoryListScreen() {
         }
 
         setExpandedItemId(itemTypeId);
-        setLoadingExpanded(true);
 
-        try {
-            const response = await databases.listDocuments(
-                DATABASE_ID,
-                COLLECTIONS.INVENTORY_ITEMS,
-                [
-                    Query.equal('item_type_id', itemTypeId),
-                    Query.limit(100)
-                ]
-            );
-
-            let items = response.documents as unknown as InventoryItem[];
-
-            // Filter by status based on active tab
-            if (activeTab === 'in-stock') {
-                items = items.filter(
-                    item => item.status === 'available' || item.status === 'staged'
-                );
-            } else if (activeTab === 'installed') {
-                // ✅ FIX: Show both assigned and installed in this tab
-                items = items.filter(
-                    item => item.status === 'assigned' || item.status === 'installed'
-                );
-            }
-            // 'all' tab shows everything, no filter needed
-
-            setExpandedItems(items);
-        } catch (error) {
-            console.error('Error loading inventory items:', error);
-        } finally {
-            setLoadingExpanded(false);
+        // Find the item type with cached items
+        const itemType = itemTypes.find(it => it.$id === itemTypeId);
+        if (!itemType || !itemType.items) {
+            setExpandedItems([]);
+            return;
         }
-    };
 
+        // Filter by status based on active tab
+        let items = itemType.items;
+        if (activeTab === 'in-stock') {
+            items = items.filter(
+                item => item.status === 'available' || item.status === 'staged'
+            );
+        } else if (activeTab === 'installed') {
+            items = items.filter(
+                item => item.status === 'assigned' || item.status === 'installed'
+            );
+        }
+
+        setExpandedItems(items);
+    };
 
     const getStatusColor = (status?: string) => {
         switch (status) {
@@ -268,16 +324,32 @@ export default function InventoryListScreen() {
                 </View>
             </View>
 
-            {/* Search Bar */}
+            {/* Search Bar with Manual Search Button */}
             <View style={[styles.searchContainer, { backgroundColor: colors.background.primary }]}>
-                <TextInput
-                    style={[styles.searchInput, { color: colors.text.primary, borderColor: colors.ui.border }]}
-                    placeholder="Search by name, category, manufacturer..."
-                    placeholderTextColor={colors.text.secondary}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    onSubmitEditing={loadItemTypes}
-                />
+                <View style={styles.searchInputContainer}>
+                    <TextInput
+                        style={[styles.searchInput, {
+                            color: colors.text.primary,
+                            borderColor: colors.ui.border
+                        }]}
+                        placeholder="Search by name, category, manufacturer..."
+                        placeholderTextColor={colors.text.secondary}
+                        value={searchInput}
+                        onChangeText={handleSearchChange}
+                        onSubmitEditing={handleSearchSubmit}
+                        returnKeyType="search"
+                    />
+                    <TouchableOpacity
+                        style={[styles.searchButton, { backgroundColor: colors.primary.cyan }]}
+                        onPress={handleSearchSubmit}
+                    >
+                        {searching ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.searchIcon}>🔍</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {/* Tabs */}
@@ -394,7 +466,6 @@ export default function InventoryListScreen() {
                                         </>
                                     ) : activeTab === 'installed' ? (
                                         <>
-                                            {/* ✅ NEW: Show assigned items */}
                                             {itemType.assignedCount > 0 && (
                                                 <View style={styles.countBadge}>
                                                     <Text style={[styles.countLabel, { color: colors.text.secondary }]}>
@@ -405,7 +476,6 @@ export default function InventoryListScreen() {
                                                     </Text>
                                                 </View>
                                             )}
-                                            {/* ✅ Keep installed count */}
                                             {itemType.installedCount > 0 && (
                                                 <View style={styles.countBadge}>
                                                     <Text style={[styles.countLabel, { color: colors.text.secondary }]}>
@@ -427,7 +497,6 @@ export default function InventoryListScreen() {
                                                     {itemType.availableCount + itemType.stagedCount}
                                                 </Text>
                                             </View>
-                                            {/* ✅ NEW: Show assigned in "all" tab too */}
                                             {itemType.assignedCount > 0 && (
                                                 <View style={styles.countBadge}>
                                                     <Text style={[styles.countLabel, { color: colors.text.secondary }]}>
@@ -462,9 +531,7 @@ export default function InventoryListScreen() {
                             {/* Expanded Individual Items */}
                             {expandedItemId === itemType.$id && (
                                 <View style={[styles.expandedContainer, { backgroundColor: colors.background.secondary }]}>
-                                    {loadingExpanded ? (
-                                        <ActivityIndicator size="small" color={colors.primary.cyan} />
-                                    ) : expandedItems.length === 0 ? (
+                                    {expandedItems.length === 0 ? (
                                         <Text style={[styles.emptyExpandedText, { color: colors.text.secondary }]}>
                                             No items
                                         </Text>
@@ -476,73 +543,70 @@ export default function InventoryListScreen() {
                                                 onPress={() => setSelectedItem(item)}
                                                 activeOpacity={0.7}
                                             >
-
-                                                    <View style={styles.inventoryItemHeader}>
-                                                        <View style={styles.inventoryItemInfo}>
-                                                            <View style={styles.statusRow}>
-                                                                <Text style={styles.statusIcon}>{getStatusIcon(item.status)}</Text>
-                                                                <View style={styles.itemNameContainer}>
-                                                                    {item.serial_number ? (
-                                                                        <>
-                                                                            <Text style={[styles.itemDisplayName, { color: colors.text.primary }]}>
-                                                                                {itemType.item_name} #{index + 1}
-                                                                            </Text>
-                                                                            <Text style={[styles.serialNumberSmall, { color: colors.text.secondary }]}>
-                                                                                SN: {item.serial_number}
-                                                                            </Text>
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <Text style={[styles.itemDisplayName, { color: colors.text.primary }]}>
-                                                                                {itemType.item_name} #{index + 1}
-                                                                            </Text>
-                                                                            <Text style={[styles.serialNumberSmall, { color: colors.text.secondary }]}>
-                                                                                ...{item.barcode.slice(-4)}
-                                                                            </Text>
-                                                                        </>
-                                                                    )}
-                                                                </View>
-                                                                <View
-                                                                    style={[
-                                                                        styles.statusBadge,
-                                                                        { backgroundColor: `${getStatusColor(item.status)}20` },
-                                                                    ]}
-                                                                >
-                                                                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                                                                        {getStatusLabel(item.status)}
-                                                                    </Text>
-                                                                </View>
+                                                <View style={styles.inventoryItemHeader}>
+                                                    <View style={styles.inventoryItemInfo}>
+                                                        <View style={styles.statusRow}>
+                                                            <Text style={styles.statusIcon}>{getStatusIcon(item.status)}</Text>
+                                                            <View style={styles.itemNameContainer}>
+                                                                {item.serial_number ? (
+                                                                    <>
+                                                                        <Text style={[styles.itemDisplayName, { color: colors.text.primary }]}>
+                                                                            {itemType.item_name} #{index + 1}
+                                                                        </Text>
+                                                                        <Text style={[styles.serialNumberSmall, { color: colors.text.secondary }]}>
+                                                                            SN: {item.serial_number}
+                                                                        </Text>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Text style={[styles.itemDisplayName, { color: colors.text.primary }]}>
+                                                                            {itemType.item_name} #{index + 1}
+                                                                        </Text>
+                                                                        <Text style={[styles.serialNumberSmall, { color: colors.text.secondary }]}>
+                                                                            ...{item.barcode.slice(-4)}
+                                                                        </Text>
+                                                                    </>
+                                                                )}
                                                             </View>
-
-                                                            {item.location && (
-                                                                <Text style={[styles.itemLocation, { color: colors.text.secondary }]}>
-                                                                    📍 {item.location}
+                                                            <View
+                                                                style={[
+                                                                    styles.statusBadge,
+                                                                    { backgroundColor: `${getStatusColor(item.status)}20` },
+                                                                ]}
+                                                            >
+                                                                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                                                                    {getStatusLabel(item.status)}
                                                                 </Text>
-                                                            )}
-
-                                                            {item.school_id && (
-                                                                <Text style={[styles.itemSchool, { color: colors.secondary.orange }]}>
-                                                                    🏫 School assigned
-                                                                </Text>
-                                                            )}
-
-                                                            {/* School-Specific Badge - Admin Only */}
-                                                            {isAdmin && item.is_school_specific && (
-                                                                <View style={[styles.schoolSpecificBadge, { backgroundColor: colors.secondary.purple + '20' }]}>
-                                                                    <Text style={[styles.schoolSpecificText, { color: colors.secondary.purple }]}>
-                                                                        🔒 School-Specific (NAS)
-                                                                    </Text>
-                                                                </View>
-                                                            )}
-
-                                                            <Text style={[styles.itemDate, { color: colors.text.secondary }]}>
-                                                                Added {formatDate(item.received_date)}
-                                                            </Text>
+                                                            </View>
                                                         </View>
 
-                                                        <Text style={[styles.itemArrow, { color: colors.text.secondary }]}>›</Text>
+                                                        {item.location && (
+                                                            <Text style={[styles.itemLocation, { color: colors.text.secondary }]}>
+                                                                📍 {item.location}
+                                                            </Text>
+                                                        )}
+
+                                                        {item.school_id && (
+                                                            <Text style={[styles.itemSchool, { color: colors.secondary.orange }]}>
+                                                                🏫 School assigned
+                                                            </Text>
+                                                        )}
+
+                                                        {isAdmin && item.is_school_specific && (
+                                                            <View style={[styles.schoolSpecificBadge, { backgroundColor: colors.secondary.purple + '20' }]}>
+                                                                <Text style={[styles.schoolSpecificText, { color: colors.secondary.purple }]}>
+                                                                    🔒 School-Specific (NAS)
+                                                                </Text>
+                                                            </View>
+                                                        )}
+
+                                                        <Text style={[styles.itemDate, { color: colors.text.secondary }]}>
+                                                            Added {formatDate(item.received_date)}
+                                                        </Text>
                                                     </View>
 
+                                                    <Text style={[styles.itemArrow, { color: colors.text.secondary }]}>›</Text>
+                                                </View>
                                             </TouchableOpacity>
                                         ))
                                     )}
@@ -560,7 +624,7 @@ export default function InventoryListScreen() {
                     item={selectedItem}
                     onClose={() => setSelectedItem(null)}
                     onRefresh={() => {
-                        loadItemTypes();
+                        loadItemTypes(true); // Force refresh to clear cache
                         if (expandedItemId) {
                             handleExpandItem(expandedItemId);
                         }
@@ -600,11 +664,25 @@ const styles = StyleSheet.create({
         padding: Spacing.md,
         ...Shadows.sm,
     },
+    searchInputContainer: {
+        flexDirection: 'row',
+        gap: Spacing.sm,
+    },
     searchInput: {
+        flex: 1,
         borderWidth: 1,
         borderRadius: BorderRadius.md,
         padding: Spacing.md,
         fontSize: Typography.sizes.md,
+    },
+    searchButton: {
+        width: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: BorderRadius.md,
+    },
+    searchIcon: {
+        fontSize: 20,
     },
     tabContainer: {
         flexDirection: 'row',
@@ -717,11 +795,6 @@ const styles = StyleSheet.create({
         fontSize: Typography.sizes.xs,
         fontFamily: 'monospace',
         marginTop: 2,
-    },
-    serialNumber: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.medium,
-        fontFamily: 'monospace',
     },
     statusBadge: {
         paddingHorizontal: Spacing.sm,

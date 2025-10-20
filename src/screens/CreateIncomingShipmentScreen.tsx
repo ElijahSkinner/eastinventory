@@ -11,8 +11,11 @@ import {
     ActivityIndicator,
     Modal,
     Pressable,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { databases, DATABASE_ID, COLLECTIONS, ItemType } from '../lib/appwrite';
@@ -49,6 +52,10 @@ export default function CreateIncomingShipmentScreen() {
     const [newQuantity, setNewQuantity] = useState('');
     const [itemTypeSearch, setItemTypeSearch] = useState('');
 
+    // Camera scanning for SKU
+    const [scanningSKU, setScanningSKU] = useState(false);
+    const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+
     useEffect(() => {
         loadItemTypes();
     }, []);
@@ -74,6 +81,32 @@ export default function CreateIncomingShipmentScreen() {
         type.category.toLowerCase().includes(itemTypeSearch.toLowerCase()) ||
         (type.manufacturer && type.manufacturer.toLowerCase().includes(itemTypeSearch.toLowerCase()))
     );
+
+    const handleScanSKU = async () => {
+        if (!cameraPermission) {
+            const { status } = await requestCameraPermission();
+            if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Camera permission is required to scan barcodes.');
+                return;
+            }
+        }
+
+        if (!cameraPermission?.granted) {
+            const { status } = await requestCameraPermission();
+            if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Camera permission is required to scan barcodes.');
+                return;
+            }
+        }
+
+        setScanningSKU(true);
+    };
+
+    const handleBarcodeScanned = ({ data }: { data: string }) => {
+        setNewSKU(data);
+        setScanningSKU(false);
+        Alert.alert('Success', 'SKU scanned successfully!');
+    };
 
     const handleAddLineItem = () => {
         if (!selectedItemType || !newSKU.trim() || !newQuantity.trim()) {
@@ -182,6 +215,40 @@ export default function CreateIncomingShipmentScreen() {
         return itemType ? itemType.item_name : 'Select item type...';
     };
 
+    // Camera Scanner Modal for SKU
+    if (scanningSKU) {
+        return (
+            <Modal visible={true} transparent={false} animationType="slide">
+                <View style={styles.cameraContainer}>
+                    <CameraView
+                        style={styles.camera}
+                        facing="back"
+                        onBarcodeScanned={handleBarcodeScanned}
+                        barcodeScannerSettings={{
+                            barcodeTypes: ['code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e', 'qr'],
+                        }}
+                    >
+                        <View style={styles.cameraOverlay}>
+                            <View style={styles.cameraHeader}>
+                                <Text style={styles.cameraTitle}>Scan SKU Barcode</Text>
+                                <TouchableOpacity
+                                    style={styles.cameraCancelButton}
+                                    onPress={() => setScanningSKU(false)}
+                                >
+                                    <Text style={styles.cameraCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={styles.scanFrame} />
+                            <Text style={styles.cameraInstructions}>
+                                Position the barcode within the frame
+                            </Text>
+                        </View>
+                    </CameraView>
+                </View>
+            </Modal>
+        );
+    }
+
     if (loading) {
         return (
             <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
@@ -191,8 +258,16 @@ export default function CreateIncomingShipmentScreen() {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
-            <ScrollView style={styles.content}>
+        <KeyboardAvoidingView
+            style={[styles.container, { backgroundColor: colors.background.secondary }]}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+            <ScrollView
+                style={styles.content}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={true}
+            >
                 {/* SH Details Section */}
                 <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
                     <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
@@ -372,20 +447,28 @@ export default function CreateIncomingShipmentScreen() {
                             <Text style={[styles.label, { color: colors.text.primary }]}>
                                 SKU *
                             </Text>
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    {
-                                        backgroundColor: colors.background.primary,
-                                        borderColor: colors.ui.border,
-                                        color: colors.text.primary,
-                                    },
-                                ]}
-                                value={newSKU}
-                                onChangeText={setNewSKU}
-                                placeholder="Enter vendor SKU"
-                                placeholderTextColor={colors.text.secondary}
-                            />
+                            <View style={styles.inputWithIcon}>
+                                <TextInput
+                                    style={[
+                                        styles.inputWithButton,
+                                        {
+                                            backgroundColor: colors.background.primary,
+                                            borderColor: colors.ui.border,
+                                            color: colors.text.primary,
+                                        },
+                                    ]}
+                                    value={newSKU}
+                                    onChangeText={setNewSKU}
+                                    placeholder="Enter vendor SKU"
+                                    placeholderTextColor={colors.text.secondary}
+                                />
+                                <TouchableOpacity
+                                    style={[styles.scanButton, { backgroundColor: colors.primary.cyan }]}
+                                    onPress={handleScanSKU}
+                                >
+                                    <Text style={styles.scanButtonText}>📷</Text>
+                                </TouchableOpacity>
+                            </View>
 
                             <Text style={[styles.label, { color: colors.text.primary }]}>
                                 Quantity *
@@ -449,6 +532,9 @@ export default function CreateIncomingShipmentScreen() {
                         </Text>
                     </View>
                 )}
+
+                {/* Extra padding for keyboard */}
+                <View style={{ height: 100 }} />
             </ScrollView>
 
             {/* Item Type Picker Modal */}
@@ -545,7 +631,7 @@ export default function CreateIncomingShipmentScreen() {
                     )}
                 </TouchableOpacity>
             </View>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -583,6 +669,27 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.md,
         padding: Spacing.md,
         fontSize: Typography.sizes.md,
+    },
+    inputWithIcon: {
+        flexDirection: 'row',
+        gap: Spacing.xs,
+    },
+    inputWithButton: {
+        flex: 1,
+        borderWidth: 1,
+        borderRadius: BorderRadius.md,
+        padding: Spacing.md,
+        fontSize: Typography.sizes.md,
+    },
+    scanButton: {
+        width: 50,
+        height: 50,
+        borderRadius: BorderRadius.md,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    scanButtonText: {
+        fontSize: 24,
     },
     textArea: {
         minHeight: 80,
@@ -768,5 +875,58 @@ const styles = StyleSheet.create({
     checkmark: {
         fontSize: 24,
         marginLeft: Spacing.md,
+    },
+    // Camera Scanner Styles
+    cameraContainer: {
+        flex: 1,
+        backgroundColor: '#000',
+    },
+    camera: {
+        flex: 1,
+    },
+    cameraOverlay: {
+        flex: 1,
+        backgroundColor: 'transparent',
+        justifyContent: 'space-between',
+        padding: Spacing.xl,
+    },
+    cameraHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingTop: Spacing.xl,
+    },
+    cameraTitle: {
+        color: '#fff',
+        fontSize: Typography.sizes.lg,
+        fontWeight: Typography.weights.bold,
+    },
+    cameraCancelButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        borderRadius: BorderRadius.md,
+    },
+    cameraCancelText: {
+        color: '#fff',
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.semibold,
+    },
+    scanFrame: {
+        width: 280,
+        height: 200,
+        borderWidth: 2,
+        borderColor: '#0093B2',
+        borderRadius: BorderRadius.md,
+        alignSelf: 'center',
+        backgroundColor: 'transparent',
+    },
+    cameraInstructions: {
+        color: '#fff',
+        fontSize: Typography.sizes.md,
+        textAlign: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
     },
 });

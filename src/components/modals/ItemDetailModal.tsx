@@ -703,7 +703,8 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContainer: {
-        maxHeight: '90%',
+        flex: 1,
+        marginTop: '10%',
         borderTopLeftRadius: BorderRadius.xl,
         borderTopRightRadius: BorderRadius.xl,
         ...Shadows.lg,
@@ -784,7 +785,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     content: {
-        maxHeight: 500,
+        flex: 1,
+    },
+    contentContainer: {
+        paddingTop: Spacing.lg,
     },
     section: {
         padding: Spacing.lg,
