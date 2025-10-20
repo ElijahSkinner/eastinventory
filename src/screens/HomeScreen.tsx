@@ -1,13 +1,23 @@
-// src/screens/HomeScreen.tsx (Enhanced)
+// src/screens/HomeScreen.tsx (Fixed Navigation)
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { databases, DATABASE_ID, COLLECTIONS } from '../lib/appwrite';
 import { Query } from 'appwrite';
+
+type RootDrawerParamList = {
+    Dashboard: undefined;
+    ProcurementStack: { screen: string } | undefined;
+    OfficeInventoryStack: { screen: string } | undefined;
+    Settings: undefined;
+};
+
+type NavigationProp = DrawerNavigationProp<RootDrawerParamList>;
 
 interface DashboardStats {
     posInProgress: number;
@@ -21,7 +31,7 @@ interface DashboardStats {
 export default function HomeScreen() {
     const { colors, theme } = useTheme();
     const { user } = useAuth();
-    const navigation = useNavigation();
+    const navigation = useNavigation<NavigationProp>();
 
     const [stats, setStats] = useState<DashboardStats>({
         posInProgress: 0,
@@ -90,17 +100,20 @@ export default function HomeScreen() {
             setRefreshing(false);
         }
     };
+
     const handleRefresh = () => {
         setRefreshing(true);
         loadDashboardStats();
     };
 
+    // ✅ FIX: Navigate to nested routes in ProcurementStack
     const menuItems = [
         {
             title: 'Incoming Shipments',
             description: 'Manage vendor orders',
             icon: '📦',
-            route: 'IncomingShipments' as const,
+            route: 'ProcurementStack' as const,
+            screen: 'PurchaseOrders' as const,
             color: colors.primary.cyan,
             badge: stats.posInProgress > 0 ? stats.posInProgress : undefined,
         },
@@ -108,7 +121,8 @@ export default function HomeScreen() {
             title: 'Receive Items',
             description: 'Scan and receive inventory',
             icon: '📷',
-            route: 'Receiving' as const,
+            route: 'ProcurementStack' as const,
+            screen: 'Receiving' as const,
             color: colors.secondary.orange,
             badge: stats.itemsReceiving > 0 ? stats.itemsReceiving : undefined,
         },
@@ -116,7 +130,8 @@ export default function HomeScreen() {
             title: 'View Inventory',
             description: 'Browse all items in stock',
             icon: '📋',
-            route: 'Inventory' as const,
+            route: 'ProcurementStack' as const,
+            screen: 'Inventory' as const,
             color: colors.secondary.purple,
             badge: stats.availableItems > 0 ? stats.availableItems : undefined,
         },
@@ -124,7 +139,8 @@ export default function HomeScreen() {
             title: 'Check Out Items',
             description: 'Assign items to schools',
             icon: '📤',
-            route: 'CheckOut' as const,
+            route: 'ProcurementStack' as const,
+            screen: 'CheckOut' as const,
             color: colors.secondary.blue,
             badge: stats.schoolsPendingPrep > 0 ? stats.schoolsPendingPrep : undefined,
         },
@@ -133,6 +149,7 @@ export default function HomeScreen() {
             description: 'App preferences and account',
             icon: '⚙️',
             route: 'Settings' as const,
+            screen: undefined,
             color: colors.primary.coolGray,
         },
     ];
@@ -237,7 +254,13 @@ export default function HomeScreen() {
                                 borderLeftColor: item.color
                             }
                         ]}
-                        onPress={() => navigation.navigate(item.route as never)}
+                        onPress={() => {
+                            if (item.screen) {
+                                navigation.navigate('ProcurementStack', { screen: item.screen });
+                            } else {
+                                navigation.navigate(item.route);
+                            }
+                        }}
                         activeOpacity={0.7}
                     >
                         <View style={styles.menuCardContent}>

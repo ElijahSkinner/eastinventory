@@ -21,6 +21,7 @@ import ItemDetailModal from '../components/modals/ItemDetailModal';
 interface ItemTypeWithCounts extends ItemType {
     availableCount: number;
     stagedCount: number;
+    assignedCount: number;
     installedCount: number;
     maintenanceCount: number;
     totalCount: number;
@@ -52,65 +53,41 @@ export default function InventoryListScreen() {
         try {
             setLoading(true);
 
-            // ===== DEBUG: Check if ANY inventory items exist at all =====
-            console.log('🔍 DEBUG: Checking ALL inventory items...');
-            try {
-                const allItemsTest = await databases.listDocuments(
-                    DATABASE_ID,
-                    COLLECTIONS.INVENTORY_ITEMS,
-                    [Query.limit(10)]
-                );
-
-                console.log('📦 Total inventory items in database:', allItemsTest.total);
-                console.log('📦 Sample items:', allItemsTest.documents.map((doc: any) => ({
-                    id: doc.$id,
-                    barcode: doc.barcode,
-                    item_type_id: doc.item_type_id,
-                    status: doc.status,
-                    hasStatus: 'status' in doc,
-                    allKeys: Object.keys(doc)
-                })));
-            } catch (error) {
-                console.error('❌ Error checking all items:', error);
-            }
-            // ===== END DEBUG =====
-
             // Get all item types
             const typesResponse = await databases.listDocuments(
                 DATABASE_ID,
                 COLLECTIONS.ITEM_TYPES,
-                [Query.limit(1000)]
+                [Query.limit(100)]
             );
 
-            console.log('📋 Total item types:', typesResponse.documents.length);
-            console.log('📋 Item type IDs:', typesResponse.documents.map((doc: any) => ({
-                id: doc.$id,
-                name: doc.item_name,
-                barcode: doc.barcode
-            })));
             // For each item type, get counts
             const typesWithCounts: ItemTypeWithCounts[] = await Promise.all(
                 typesResponse.documents.map(async (itemType) => {
-                    const [available, staged, installed, maintenance] = await Promise.all([
+                    const [available, staged, assigned, installed, maintenance] = await Promise.all([
                         databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
                             Query.equal('item_type_id', itemType.$id),
                             Query.equal('status', 'available'),
-                            Query.limit(1000)
+                            Query.limit(100)
                         ]),
                         databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
                             Query.equal('item_type_id', itemType.$id),
                             Query.equal('status', 'staged'),
-                            Query.limit(1000)
+                            Query.limit(100)
+                        ]),
+                        databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
+                            Query.equal('item_type_id', itemType.$id),
+                            Query.equal('status', 'assigned'),
+                            Query.limit(100)
                         ]),
                         databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
                             Query.equal('item_type_id', itemType.$id),
                             Query.equal('status', 'installed'),
-                            Query.limit(1000)
+                            Query.limit(100)
                         ]),
                         databases.listDocuments(DATABASE_ID, COLLECTIONS.INVENTORY_ITEMS, [
                             Query.equal('item_type_id', itemType.$id),
                             Query.equal('status', 'maintenance'),
-                            Query.limit(1000)
+                            Query.limit(100)
                         ])
                     ]);
 
@@ -118,71 +95,27 @@ export default function InventoryListScreen() {
                         ...(itemType as unknown as ItemType),
                         availableCount: available.total,
                         stagedCount: staged.total,
+                        assignedCount: assigned.total,  // ✅ ADD THIS
                         installedCount: installed.total,
                         maintenanceCount: maintenance.total,
-                        totalCount: available.total + staged.total + installed.total + maintenance.total,
+                        totalCount: available.total + staged.total + assigned.total + installed.total + maintenance.total,
                     };
                 })
             );
 
-            // ===== ADD DEBUG CODE HERE (AFTER typesWithCounts is created) =====
-            console.log('🔍 Total item types loaded:', typesWithCounts.length);
-            console.log('📊 Types with counts:', typesWithCounts.map((t: ItemTypeWithCounts) => ({
-                name: t.item_name,
-                available: t.availableCount,
-                staged: t.stagedCount,
-                installed: t.installedCount,
-                total: t.totalCount
-            })));
-
-            // Check first item in detail
-            if (typesWithCounts.length > 0) {
-                const firstItemType = typesWithCounts[0];
-                console.log('🔍 Checking first item type:', firstItemType.item_name);
-
-                try {
-                    const testQuery = await databases.listDocuments(
-                        DATABASE_ID,
-                        COLLECTIONS.INVENTORY_ITEMS,
-                        [
-                            Query.equal('item_type_id', firstItemType.$id),
-                            Query.limit(1)
-                        ]
-                    );
-
-                    if (testQuery.documents.length > 0) {
-                        const sampleItem = testQuery.documents[0];
-                        console.log('📦 Sample inventory item fields:', Object.keys(sampleItem));
-                        console.log('📦 Full sample item:', sampleItem);
-
-                        // Check if it has 'status' or 'order_status'
-                        if ('status' in sampleItem) {
-                            console.log('✅ Field name is: status =', (sampleItem as any).status);
-                        }
-                        if ('order_status' in sampleItem) {
-                            console.log('✅ Field name is: order_status =', (sampleItem as any).order_status);
-                        }
-                    } else {
-                        console.log('⚠️ No inventory items found for this item type');
-                    }
-                } catch (error) {
-                    console.error('❌ Debug query error:', error);
-                }
-            }
-            // ===== END DEBUG CODE =====
-
             // Filter based on active tab
             let filtered = typesWithCounts;
             if (activeTab === 'in-stock') {
+                // ✅ FIX: In-stock should show available + staged (not assigned)
                 filtered = typesWithCounts.filter(
                     (item) => item.availableCount > 0 || item.stagedCount > 0
                 );
             } else if (activeTab === 'installed') {
-                filtered = typesWithCounts.filter((item) => item.installedCount > 0);
+                // ✅ FIX: Installed should show BOTH assigned and installed
+                filtered = typesWithCounts.filter((item) =>
+                    item.assignedCount > 0 || item.installedCount > 0
+                );
             }
-
-            console.log('🎯 Active tab:', activeTab);
-            console.log('🎯 Filtered items:', filtered.length);
 
             // Apply search filter
             if (searchQuery) {
@@ -191,7 +124,6 @@ export default function InventoryListScreen() {
                     item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     item.manufacturer?.toLowerCase().includes(searchQuery.toLowerCase())
                 );
-                console.log('🔎 After search filter:', filtered.length);
             }
 
             setItemTypes(filtered);
@@ -210,44 +142,38 @@ export default function InventoryListScreen() {
 
     const handleExpandItem = async (itemTypeId: string) => {
         if (expandedItemId === itemTypeId) {
-            // Collapse
             setExpandedItemId(null);
             setExpandedItems([]);
             return;
         }
 
-        // Expand
         setExpandedItemId(itemTypeId);
         setLoadingExpanded(true);
 
         try {
-            // ===== FIX: Use correct field name 'status' not 'order_status' =====
             const response = await databases.listDocuments(
                 DATABASE_ID,
                 COLLECTIONS.INVENTORY_ITEMS,
                 [
                     Query.equal('item_type_id', itemTypeId),
-                    Query.limit(1000)
+                    Query.limit(100)
                 ]
             );
 
-            // Filter by status based on active tab
             let items = response.documents as unknown as InventoryItem[];
 
+            // Filter by status based on active tab
             if (activeTab === 'in-stock') {
                 items = items.filter(
-                    item => item.status === 'available' ||
-                        item.status === 'staged' ||
-                        item.status === 'assigned'
+                    item => item.status === 'available' || item.status === 'staged'
                 );
             } else if (activeTab === 'installed') {
-                items = items.filter(item => item.status === 'installed');
+                // ✅ FIX: Show both assigned and installed in this tab
+                items = items.filter(
+                    item => item.status === 'assigned' || item.status === 'installed'
+                );
             }
             // 'all' tab shows everything, no filter needed
-
-            console.log('📦 Loaded', items.length, 'items for item type:', itemTypeId);
-            console.log('📋 Active tab:', activeTab);
-            console.log('🔍 Sample item statuses:', items.slice(0, 3).map(i => i.status));
 
             setExpandedItems(items);
         } catch (error) {
@@ -467,14 +393,30 @@ export default function InventoryListScreen() {
                                             )}
                                         </>
                                     ) : activeTab === 'installed' ? (
-                                        <View style={styles.countBadge}>
-                                            <Text style={[styles.countLabel, { color: colors.text.secondary }]}>
-                                                Installed
-                                            </Text>
-                                            <Text style={[styles.countValue, { color: colors.primary.coolGray }]}>
-                                                {itemType.installedCount}
-                                            </Text>
-                                        </View>
+                                        <>
+                                            {/* ✅ NEW: Show assigned items */}
+                                            {itemType.assignedCount > 0 && (
+                                                <View style={styles.countBadge}>
+                                                    <Text style={[styles.countLabel, { color: colors.text.secondary }]}>
+                                                        Assigned
+                                                    </Text>
+                                                    <Text style={[styles.countValue, { color: colors.secondary.purple }]}>
+                                                        {itemType.assignedCount}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                            {/* ✅ Keep installed count */}
+                                            {itemType.installedCount > 0 && (
+                                                <View style={styles.countBadge}>
+                                                    <Text style={[styles.countLabel, { color: colors.text.secondary }]}>
+                                                        Installed
+                                                    </Text>
+                                                    <Text style={[styles.countValue, { color: colors.primary.coolGray }]}>
+                                                        {itemType.installedCount}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </>
                                     ) : (
                                         <>
                                             <View style={styles.countBadge}>
@@ -485,6 +427,17 @@ export default function InventoryListScreen() {
                                                     {itemType.availableCount + itemType.stagedCount}
                                                 </Text>
                                             </View>
+                                            {/* ✅ NEW: Show assigned in "all" tab too */}
+                                            {itemType.assignedCount > 0 && (
+                                                <View style={styles.countBadge}>
+                                                    <Text style={[styles.countLabel, { color: colors.text.secondary }]}>
+                                                        Assigned
+                                                    </Text>
+                                                    <Text style={[styles.countValue, { color: colors.secondary.purple }]}>
+                                                        {itemType.assignedCount}
+                                                    </Text>
+                                                </View>
+                                            )}
                                             <View style={styles.countBadge}>
                                                 <Text style={[styles.countLabel, { color: colors.text.secondary }]}>
                                                     Installed
@@ -523,71 +476,73 @@ export default function InventoryListScreen() {
                                                 onPress={() => setSelectedItem(item)}
                                                 activeOpacity={0.7}
                                             >
-                                                <View style={styles.inventoryItemHeader}>
-                                                    <View style={styles.inventoryItemInfo}>
-                                                        <View style={styles.statusRow}>
-                                                            <Text style={styles.statusIcon}>{getStatusIcon(item.status)}</Text>
-                                                            <View style={styles.itemNameContainer}>
-                                                                {item.serial_number ? (
-                                                                    <>
-                                                                        <Text style={[styles.itemDisplayName, { color: colors.text.primary }]}>
-                                                                            {itemType.item_name} #{index + 1}
-                                                                        </Text>
-                                                                        <Text style={[styles.serialNumberSmall, { color: colors.text.secondary }]}>
-                                                                            SN: {item.serial_number}
-                                                                        </Text>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <Text style={[styles.itemDisplayName, { color: colors.text.primary }]}>
-                                                                            {itemType.item_name} #{index + 1}
-                                                                        </Text>
-                                                                        <Text style={[styles.serialNumberSmall, { color: colors.text.secondary }]}>
-                                                                            ...{item.barcode.slice(-4)}
-                                                                        </Text>
-                                                                    </>
-                                                                )}
+
+                                                    <View style={styles.inventoryItemHeader}>
+                                                        <View style={styles.inventoryItemInfo}>
+                                                            <View style={styles.statusRow}>
+                                                                <Text style={styles.statusIcon}>{getStatusIcon(item.status)}</Text>
+                                                                <View style={styles.itemNameContainer}>
+                                                                    {item.serial_number ? (
+                                                                        <>
+                                                                            <Text style={[styles.itemDisplayName, { color: colors.text.primary }]}>
+                                                                                {itemType.item_name} #{index + 1}
+                                                                            </Text>
+                                                                            <Text style={[styles.serialNumberSmall, { color: colors.text.secondary }]}>
+                                                                                SN: {item.serial_number}
+                                                                            </Text>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <Text style={[styles.itemDisplayName, { color: colors.text.primary }]}>
+                                                                                {itemType.item_name} #{index + 1}
+                                                                            </Text>
+                                                                            <Text style={[styles.serialNumberSmall, { color: colors.text.secondary }]}>
+                                                                                ...{item.barcode.slice(-4)}
+                                                                            </Text>
+                                                                        </>
+                                                                    )}
+                                                                </View>
+                                                                <View
+                                                                    style={[
+                                                                        styles.statusBadge,
+                                                                        { backgroundColor: `${getStatusColor(item.status)}20` },
+                                                                    ]}
+                                                                >
+                                                                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                                                                        {getStatusLabel(item.status)}
+                                                                    </Text>
+                                                                </View>
                                                             </View>
-                                                            <View
-                                                                style={[
-                                                                    styles.statusBadge,
-                                                                    { backgroundColor: `${getStatusColor(item.status)}20` },
-                                                                ]}
-                                                            >
-                                                                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                                                                    {getStatusLabel(item.status)}
+
+                                                            {item.location && (
+                                                                <Text style={[styles.itemLocation, { color: colors.text.secondary }]}>
+                                                                    📍 {item.location}
                                                                 </Text>
-                                                            </View>
+                                                            )}
+
+                                                            {item.school_id && (
+                                                                <Text style={[styles.itemSchool, { color: colors.secondary.orange }]}>
+                                                                    🏫 School assigned
+                                                                </Text>
+                                                            )}
+
+                                                            {/* School-Specific Badge - Admin Only */}
+                                                            {isAdmin && item.is_school_specific && (
+                                                                <View style={[styles.schoolSpecificBadge, { backgroundColor: colors.secondary.purple + '20' }]}>
+                                                                    <Text style={[styles.schoolSpecificText, { color: colors.secondary.purple }]}>
+                                                                        🔒 School-Specific (NAS)
+                                                                    </Text>
+                                                                </View>
+                                                            )}
+
+                                                            <Text style={[styles.itemDate, { color: colors.text.secondary }]}>
+                                                                Added {formatDate(item.received_date)}
+                                                            </Text>
                                                         </View>
 
-                                                        {item.location && (
-                                                            <Text style={[styles.itemLocation, { color: colors.text.secondary }]}>
-                                                                📍 {item.location}
-                                                            </Text>
-                                                        )}
-
-                                                        {item.school_id && (
-                                                            <Text style={[styles.itemSchool, { color: colors.secondary.orange }]}>
-                                                                🏫 School assigned
-                                                            </Text>
-                                                        )}
-
-                                                        {/* School-Specific Badge - Admin Only */}
-                                                        {isAdmin && item.is_school_specific && (
-                                                            <View style={[styles.schoolSpecificBadge, { backgroundColor: colors.secondary.purple + '20' }]}>
-                                                                <Text style={[styles.schoolSpecificText, { color: colors.secondary.purple }]}>
-                                                                    🔒 School-Specific (NAS)
-                                                                </Text>
-                                                            </View>
-                                                        )}
-
-                                                        <Text style={[styles.itemDate, { color: colors.text.secondary }]}>
-                                                            Added {formatDate(item.received_date)}
-                                                        </Text>
+                                                        <Text style={[styles.itemArrow, { color: colors.text.secondary }]}>›</Text>
                                                     </View>
 
-                                                    <Text style={[styles.itemArrow, { color: colors.text.secondary }]}>›</Text>
-                                                </View>
                                             </TouchableOpacity>
                                         ))
                                     )}

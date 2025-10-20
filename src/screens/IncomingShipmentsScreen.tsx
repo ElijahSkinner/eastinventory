@@ -31,6 +31,7 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TabParamList, RootStackParamList } from '../navigation/AppNavigator';
+import { CommonActions } from '@react-navigation/native';
 
 export default function IncomingShipmentsScreen() {
     const { colors } = useTheme();
@@ -78,7 +79,7 @@ export default function IncomingShipmentsScreen() {
             if (searchQuery) {
                 orders = orders.filter(
                     (sh) =>
-                        sh.SH_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        sh.po_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         sh.vendor.toLowerCase().includes(searchQuery.toLowerCase())
                 );
             }
@@ -284,7 +285,7 @@ export default function IncomingShipmentsScreen() {
                                                         { color: colors.primary.coolGray },
                                                     ]}
                                                 >
-                                                    {sh.SH_number}
+                                                    {sh.po_number}
                                                 </Text>
                                                 <Text style={[styles.vendor, { color: colors.text.secondary }]}>
                                                     {sh.vendor}
@@ -442,7 +443,14 @@ export default function IncomingShipmentsScreen() {
             {isAdmin && (
                 <TouchableOpacity
                     style={[styles.createButton, { backgroundColor: colors.primary.cyan }]}
-                    onPress={() => navigation.navigate('CreateIncomingShipment' as never)}
+                    onPress={() => {
+                        // Use CommonActions to navigate to root stack
+                        navigation.dispatch(
+                            CommonActions.navigate({
+                                name: 'CreatePurchaseOrder',
+                            })
+                        );
+                    }}
                 >
                     <Text style={styles.createButtonText}>+ New Incoming Shipment</Text>
                 </TouchableOpacity>

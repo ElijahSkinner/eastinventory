@@ -59,16 +59,54 @@ export default function ReceivingScreen({ route }: any) {
         }
     }, [route?.params?.sku]);
 
+    const selectLineItem = async (poLineItem: SHLineItem) => {
+        try {
+            // Load item type
+            const itemType = await databases.getDocument(
+                DATABASE_ID,
+                COLLECTIONS.ITEM_TYPES,
+                poLineItem.item_type_id
+            );
+
+            // Load Incoming Shipment
+            const IncomingShipment = await databases.getDocument(
+                DATABASE_ID,
+                COLLECTIONS.PURCHASE_ORDERS,
+                poLineItem.purchase_order_id
+            );
+
+            // Create receiving session
+            setReceivingSession({
+                sku: poLineItem.sku,
+                SHLineItem: poLineItem,
+                itemType: itemType as unknown as ItemType,
+                IncomingShipment: IncomingShipment as unknown as IncomingShipment,
+                quantityToReceive: 0,
+                location: '',
+            });
+
+            // Pre-fill with remaining quantity
+            const remaining = poLineItem.quantity_ordered - poLineItem.quantity_received;
+            setQuantityInput(remaining.toString());
+            setLocationInput('');
+            setProcessing(false);
+
+        } catch (error) {
+            console.error('Error loading shipment details:', error);
+            Alert.alert('Error', 'Failed to load shipment details.');
+            setProcessing(false);
+        }
+    };
     const handleSKUScan = async (sku: string) => {
         setScanning(false);
         setProcessing(true);
 
         try {
-            // ===== FIX #2: Find INCOMPLETE line items only =====
+            // Find ALL incomplete line items with this SKU
             const lineItemsResponse = await databases.listDocuments(
                 DATABASE_ID,
                 COLLECTIONS.po_LINE_ITEMS,
-                [Query.equal('sku', sku), Query.limit(100)]  // Get all matching SKUs
+                [Query.equal('sku', sku), Query.limit(100)]
             );
 
             if (lineItemsResponse.documents.length === 0) {
@@ -94,45 +132,49 @@ export default function ReceivingScreen({ route }: any) {
                 return;
             }
 
-            // Get the first incomplete line item (you could also show a picker if multiple)
-            const SHLineItem = incompleteLineItems[0] as unknown as SHLineItem;
+            if (incompleteLineItems.length > 1) {
+                // Load PO details for each line item to show to user
+                const lineItemsWithPO = await Promise.all(
+                    incompleteLineItems.map(async (lineItem: any) => {
+                        const po = await databases.getDocument(
+                            DATABASE_ID,
+                            COLLECTIONS.PURCHASE_ORDERS,
+                            lineItem.purchase_order_id
+                        );
+                        return { lineItem, po };
+                    })
+                );
 
-            // Load item type
-            const itemType = await databases.getDocument(
-                DATABASE_ID,
-                COLLECTIONS.ITEM_TYPES,
-                SHLineItem.item_type_id
-            );
+                // Create alert options for each PO
+                const poOptions = lineItemsWithPO.map(({ lineItem, po }: any, index) => {
+                    const remaining = lineItem.quantity_ordered - lineItem.quantity_received;
+                    return {
+                        text: `${po.po_number} - ${remaining} remaining`,
+                        onPress: () => selectLineItem(lineItem as any),
+                    };
+                });
 
-            // Load Incoming Shipment
-            const IncomingShipment = await databases.getDocument(
-                DATABASE_ID,
-                COLLECTIONS.PURCHASE_ORDERS,
-                SHLineItem.purchase_order_id
-            );
+                Alert.alert(
+                    'Multiple Shipments Found',
+                    `This SKU has ${incompleteLineItems.length} incomplete shipments. Which one are you receiving?`,
+                    [
+                        ...poOptions,
+                        { text: 'Cancel', style: 'cancel', onPress: () => setProcessing(false) }
+                    ]
+                );
+                return;
+            }
 
-            // Create receiving session
-            setReceivingSession({
-                sku,
-                SHLineItem: SHLineItem as SHLineItem,
-                itemType: itemType as unknown as ItemType,
-                IncomingShipment: IncomingShipment as unknown as IncomingShipment,
-                quantityToReceive: 0,
-                location: '',
-            });
-
-            // Pre-fill with remaining quantity
-            const remaining = SHLineItem.quantity_ordered - SHLineItem.quantity_received;
-            setQuantityInput(remaining.toString());
-            setLocationInput('');
+            // Only one incomplete shipment - proceed directly
+            await selectLineItem(incompleteLineItems[0] as any);
 
         } catch (error) {
             console.error('Error processing SKU:', error);
             Alert.alert('Error', 'Failed to process SKU. Please try again.');
-        } finally {
             setProcessing(false);
         }
     };
+
 
     const handleBarcodeScanned = ({ data }: { data: string }) => {
         if (!scanning) return;
