@@ -151,6 +151,7 @@ const OrderCard = React.memo(({
         </TouchableOpacity>
     );
 });
+OrderCard.displayName = 'OrderCard';
 
 const OrderItemCard = React.memo(({
                                       item,
@@ -185,6 +186,7 @@ const OrderItemCard = React.memo(({
         </View>
     );
 });
+OrderItemCard.displayName = 'OrderItemCard';
 
 const InventoryItemCard = React.memo(({
                                           item,
@@ -227,6 +229,7 @@ const InventoryItemCard = React.memo(({
         </View>
     </TouchableOpacity>
 ));
+InventoryItemCard.displayName = 'InventoryItemCard';
 
 // ====== MAIN COMPONENT ======
 export default function SchoolOrdersScreen() {
