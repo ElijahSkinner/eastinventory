@@ -4,8 +4,8 @@ import { Typography } from './typography';
 import { Spacing } from './spacing';
 import { BorderRadius } from './borderRadius';
 import { Shadows } from './shadows';
-
-export { Colors, Typography, Spacing, BorderRadius, Shadows };
+import CommonStyles from "@/src/theme/commonStyles";
+export { Colors, Typography, Spacing, BorderRadius, Shadows, CommonStyles };
 
 export const Theme = {
     colors: Colors,
