@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     last_login: new Date().toISOString(),
                 }
             );
-            setUserSettings(newSettings as UserSettings);
+            setUserSettings(newSettings as unknown as UserSettings);
         } catch (error) {
             console.error('Error creating user settings:', error);
         }
@@ -159,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 userSettings.$id,
                 settings
             );
-            setUserSettings(updated as UserSettings);
+            setUserSettings(updated as unknown as UserSettings);
 
             // Apply theme if it was updated
             if (settings.theme) {

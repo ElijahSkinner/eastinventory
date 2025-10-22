@@ -8,14 +8,14 @@ import {
     ScrollView,
     Switch,
 } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
+import { DrawerParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
 import LogoutConfirmModal from '../components/modals/LogoutConfirmModal';
 
-type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
+type SettingsScreenNavigationProp = DrawerNavigationProp<DrawerParamList, 'Settings'>;
 
 interface Props {
     navigation: SettingsScreenNavigationProp;

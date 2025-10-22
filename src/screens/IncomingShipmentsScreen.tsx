@@ -28,16 +28,16 @@ import {
 import { Query } from 'appwrite';
 import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
 import { CompositeNavigationProp } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { TabParamList, RootStackParamList } from '../navigation/AppNavigator';
+import { ProcurementStackParamList, RootStackParamList } from '../navigation/AppNavigator';
 import { CommonActions } from '@react-navigation/native';
 
 export default function IncomingShipmentsScreen() {
     const { colors } = useTheme();
     const { isAdmin } = useRole();
+
     type IncomingShipmentsNavigationProp = CompositeNavigationProp<
-        BottomTabNavigationProp<TabParamList, 'IncomingShipments'>,
+        NativeStackNavigationProp<ProcurementStackParamList, 'PurchaseOrders'>,
         NativeStackNavigationProp<RootStackParamList>
     >;
     const navigation = useNavigation<IncomingShipmentsNavigationProp>();
@@ -178,9 +178,7 @@ export default function IncomingShipmentsScreen() {
             </View>
         );
     }
-    type IncomingShipmentsScreenProps = {
-        navigation: BottomTabNavigationProp<TabParamList, 'IncomingShipments'>;
-    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
             {/* Header with Admin Badge */}
@@ -418,7 +416,6 @@ export default function IncomingShipmentsScreen() {
                                                                     { backgroundColor: colors.primary.cyan },
                                                                 ]}
                                                                 onPress={() => {
-                                                                    // Now TypeScript knows about the Receiving route and its params
                                                                     navigation.navigate('Receiving', { sku: lineItem.sku });
                                                                 }}
                                                             >
