@@ -20,7 +20,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { databases, DATABASE_ID, COLLECTIONS, ItemType } from '../lib/appwrite';
 import { ID, Query } from 'appwrite';
-import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
+import { Typography, Spacing, BorderRadius, Shadows, CommonStyles } from '../theme';
 
 interface LineItem {
     id: string;
@@ -219,27 +219,27 @@ export default function CreateIncomingShipmentScreen() {
     if (scanningSKU) {
         return (
             <Modal visible={true} transparent={false} animationType="slide">
-                <View style={styles.cameraContainer}>
+                <View style={CommonStyles.camera.container}>
                     <CameraView
-                        style={styles.camera}
+                        style={CommonStyles.camera.camera}
                         facing="back"
                         onBarcodeScanned={handleBarcodeScanned}
                         barcodeScannerSettings={{
                             barcodeTypes: ['code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e', 'qr'],
                         }}
                     >
-                        <View style={styles.cameraOverlay}>
-                            <View style={styles.cameraHeader}>
-                                <Text style={styles.cameraTitle}>Scan SKU Barcode</Text>
+                        <View style={CommonStyles.camera.overlay}>
+                            <View style={CommonStyles.camera.header}>
+                                <Text style={CommonStyles.camera.title}>Scan SKU Barcode</Text>
                                 <TouchableOpacity
-                                    style={styles.cameraCancelButton}
+                                    style={CommonStyles.camera.cancelButton}
                                     onPress={() => setScanningSKU(false)}
                                 >
                                     <Text style={styles.cameraCancelText}>Cancel</Text>
                                 </TouchableOpacity>
                             </View>
-                            <View style={styles.scanFrame} />
-                            <Text style={styles.cameraInstructions}>
+                            <View style={CommonStyles.camera.scanFrame} />
+                            <Text style={CommonStyles.camera.instructions}>
                                 Position the barcode within the frame
                             </Text>
                         </View>
@@ -251,7 +251,7 @@ export default function CreateIncomingShipmentScreen() {
 
     if (loading) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+            <View style={[CommonStyles.containers.centered, { backgroundColor: colors.background.secondary }]}>
                 <ActivityIndicator size="large" color={colors.primary.cyan} />
             </View>
         );
@@ -259,27 +259,27 @@ export default function CreateIncomingShipmentScreen() {
 
     return (
         <KeyboardAvoidingView
-            style={[styles.container, { backgroundColor: colors.background.secondary }]}
+            style={[CommonStyles.containers.flex, { backgroundColor: colors.background.secondary }]}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
             <ScrollView
-                style={styles.content}
+                style={CommonStyles.containers.flex}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={true}
             >
                 {/* SH Details Section */}
-                <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
+                <View style={[CommonStyles.sections.container, { backgroundColor: colors.background.primary }]}>
+                    <Text style={[CommonStyles.sections.title, { color: colors.primary.coolGray }]}>
                         Incoming Shipment Details
                     </Text>
 
-                    <Text style={[styles.label, { color: colors.text.primary }]}>
+                    <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
                         Vendor *
                     </Text>
                     <TextInput
                         style={[
-                            styles.input,
+                            CommonStyles.inputs.base,
                             {
                                 backgroundColor: colors.background.secondary,
                                 borderColor: colors.ui.border,
@@ -292,12 +292,12 @@ export default function CreateIncomingShipmentScreen() {
                         placeholderTextColor={colors.text.secondary}
                     />
 
-                    <Text style={[styles.label, { color: colors.text.primary }]}>
+                    <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
                         Order Date *
                     </Text>
                     <TextInput
                         style={[
-                            styles.input,
+                            CommonStyles.inputs.base,
                             {
                                 backgroundColor: colors.background.secondary,
                                 borderColor: colors.ui.border,
@@ -310,12 +310,12 @@ export default function CreateIncomingShipmentScreen() {
                         placeholderTextColor={colors.text.secondary}
                     />
 
-                    <Text style={[styles.label, { color: colors.text.primary }]}>
+                    <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
                         Expected Delivery (Optional)
                     </Text>
                     <TextInput
                         style={[
-                            styles.input,
+                            CommonStyles.inputs.base,
                             {
                                 backgroundColor: colors.background.secondary,
                                 borderColor: colors.ui.border,
@@ -328,13 +328,12 @@ export default function CreateIncomingShipmentScreen() {
                         placeholderTextColor={colors.text.secondary}
                     />
 
-                    <Text style={[styles.label, { color: colors.text.primary }]}>
+                    <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
                         Notes (Optional)
                     </Text>
                     <TextInput
                         style={[
-                            styles.input,
-                            styles.textArea,
+                            CommonStyles.inputs.textArea,
                             {
                                 backgroundColor: colors.background.secondary,
                                 borderColor: colors.ui.border,
@@ -351,21 +350,21 @@ export default function CreateIncomingShipmentScreen() {
                 </View>
 
                 {/* Line Items Section */}
-                <View style={[styles.section, { backgroundColor: colors.background.primary }]}>
+                <View style={[CommonStyles.sections.container, { backgroundColor: colors.background.primary }]}>
                     <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
+                        <Text style={[CommonStyles.sections.title, { color: colors.primary.coolGray }]}>
                             Line Items ({lineItems.length})
                         </Text>
                         <TouchableOpacity
-                            style={[styles.addButton, { backgroundColor: colors.primary.cyan }]}
+                            style={[CommonStyles.buttons.primary, { backgroundColor: colors.primary.cyan }]}
                             onPress={() => setShowAddLineItem(true)}
                         >
-                            <Text style={styles.addButtonText}>+ Add Item</Text>
+                            <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>+ Add Item</Text>
                         </TouchableOpacity>
                     </View>
 
                     {lineItems.length === 0 ? (
-                        <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
+                        <Text style={[CommonStyles.empty.subtext, { color: colors.text.secondary }]}>
                             No line items added yet
                         </Text>
                     ) : (
@@ -373,17 +372,17 @@ export default function CreateIncomingShipmentScreen() {
                             <View
                                 key={item.id}
                                 style={[
-                                    styles.lineItemCard,
-                                    { backgroundColor: colors.background.secondary },
+                                    CommonStyles.cards.compact,
+                                    { backgroundColor: colors.background.secondary, marginBottom: Spacing.sm },
                                 ]}
                             >
-                                <View style={styles.lineItemHeader}>
+                                <View style={CommonStyles.rows.base}>
                                     <Text style={[styles.lineItemNumber, { color: colors.text.secondary }]}>
                                         #{index + 1}
                                     </Text>
                                     <TouchableOpacity
                                         onPress={() => handleRemoveLineItem(item.id)}
-                                        style={styles.removeButton}
+                                        style={{ padding: Spacing.xs }}
                                     >
                                         <Text style={[styles.removeButtonText, { color: colors.secondary.red }]}>
                                             Remove
@@ -408,15 +407,15 @@ export default function CreateIncomingShipmentScreen() {
                     {showAddLineItem && (
                         <View
                             style={[
-                                styles.addLineItemForm,
-                                { backgroundColor: colors.background.secondary },
+                                CommonStyles.cards.compact,
+                                { backgroundColor: colors.background.secondary, marginTop: Spacing.md },
                             ]}
                         >
-                            <Text style={[styles.formTitle, { color: colors.primary.coolGray }]}>
+                            <Text style={[CommonStyles.sections.title, { color: colors.primary.coolGray }]}>
                                 Add Line Item
                             </Text>
 
-                            <Text style={[styles.label, { color: colors.text.primary }]}>
+                            <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
                                 Item Type *
                             </Text>
                             <TouchableOpacity
@@ -444,7 +443,7 @@ export default function CreateIncomingShipmentScreen() {
                                 <Text style={[styles.pickerArrow, { color: colors.text.secondary }]}>›</Text>
                             </TouchableOpacity>
 
-                            <Text style={[styles.label, { color: colors.text.primary }]}>
+                            <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
                                 SKU *
                             </Text>
                             <View style={styles.inputWithIcon}>
@@ -470,12 +469,12 @@ export default function CreateIncomingShipmentScreen() {
                                 </TouchableOpacity>
                             </View>
 
-                            <Text style={[styles.label, { color: colors.text.primary }]}>
+                            <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
                                 Quantity *
                             </Text>
                             <TextInput
                                 style={[
-                                    styles.input,
+                                    CommonStyles.inputs.base,
                                     {
                                         backgroundColor: colors.background.primary,
                                         borderColor: colors.ui.border,
@@ -492,8 +491,12 @@ export default function CreateIncomingShipmentScreen() {
                             <View style={styles.formButtons}>
                                 <TouchableOpacity
                                     style={[
-                                        styles.formButton,
-                                        { backgroundColor: colors.background.primary, borderColor: colors.ui.border },
+                                        CommonStyles.buttons.secondary,
+                                        {
+                                            backgroundColor: colors.background.primary,
+                                            borderColor: colors.ui.border,
+                                            flex: 1,
+                                        },
                                     ]}
                                     onPress={() => {
                                         setShowAddLineItem(false);
@@ -503,19 +506,19 @@ export default function CreateIncomingShipmentScreen() {
                                         setItemTypeSearch('');
                                     }}
                                 >
-                                    <Text style={[styles.formButtonText, { color: colors.text.primary }]}>
+                                    <Text style={[CommonStyles.buttons.text, { color: colors.text.primary }]}>
                                         Cancel
                                     </Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     style={[
-                                        styles.formButton,
-                                        { backgroundColor: colors.primary.cyan },
+                                        CommonStyles.buttons.primary,
+                                        { backgroundColor: colors.primary.cyan, flex: 1 },
                                     ]}
                                     onPress={handleAddLineItem}
                                 >
-                                    <Text style={[styles.formButtonText, { color: '#fff' }]}>
+                                    <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>
                                         Add Item
                                     </Text>
                                 </TouchableOpacity>
@@ -540,15 +543,15 @@ export default function CreateIncomingShipmentScreen() {
             {/* Item Type Picker Modal */}
             <Modal visible={showItemTypePicker} transparent animationType="slide">
                 <Pressable
-                    style={styles.modalOverlay}
+                    style={CommonStyles.modals.overlay}
                     onPress={() => setShowItemTypePicker(false)}
                 >
                     <Pressable
-                        style={[styles.modalContainer, { backgroundColor: colors.background.primary }]}
+                        style={[styles.modalContainerFixed, { backgroundColor: colors.background.primary }]}
                         onPress={(e) => e.stopPropagation()}
                     >
-                        <View style={[styles.modalHeader, { borderBottomColor: colors.ui.border }]}>
-                            <Text style={[styles.modalTitle, { color: colors.primary.coolGray }]}>
+                        <View style={[CommonStyles.modals.header, { borderBottomColor: colors.ui.border }]}>
+                            <Text style={[CommonStyles.modals.title, { color: colors.primary.coolGray }]}>
                                 Select Item Type
                             </Text>
                             <TouchableOpacity onPress={() => {
@@ -562,7 +565,7 @@ export default function CreateIncomingShipmentScreen() {
                         {/* Search box */}
                         <View style={styles.searchContainer}>
                             <TextInput
-                                style={[styles.searchInput, {
+                                style={[CommonStyles.inputs.search, {
                                     backgroundColor: colors.background.secondary,
                                     color: colors.text.primary,
                                     borderColor: colors.ui.border
@@ -577,14 +580,14 @@ export default function CreateIncomingShipmentScreen() {
 
                         {/* Scrollable list */}
                         <ScrollView
-                            style={styles.modalContent}
+                            style={styles.modalScrollView}
                             nestedScrollEnabled={true}
                             showsVerticalScrollIndicator={true}
                         >
                             {filteredItemTypes.map((type) => (
                                 <TouchableOpacity
                                     key={type.$id}
-                                    style={[styles.itemTypeOption, { borderBottomColor: colors.ui.divider }]}
+                                    style={[CommonStyles.lists.item, { borderBottomColor: colors.ui.divider }]}
                                     onPress={() => {
                                         setSelectedItemType(type.$id);
                                         // Auto-fill SKU if available
@@ -595,7 +598,7 @@ export default function CreateIncomingShipmentScreen() {
                                         setItemTypeSearch('');
                                     }}
                                 >
-                                    <View style={styles.itemTypeInfo}>
+                                    <View style={CommonStyles.containers.flex}>
                                         <Text style={[styles.itemTypeName, { color: colors.text.primary }]}>
                                             {type.item_name}
                                         </Text>
@@ -617,7 +620,7 @@ export default function CreateIncomingShipmentScreen() {
             <View style={[styles.footer, { backgroundColor: colors.background.primary, borderTopColor: colors.ui.border }]}>
                 <TouchableOpacity
                     style={[
-                        styles.submitButton,
+                        CommonStyles.buttons.primary,
                         { backgroundColor: colors.primary.cyan },
                         submitting && styles.disabledButton,
                     ]}
@@ -627,7 +630,7 @@ export default function CreateIncomingShipmentScreen() {
                     {submitting ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.submitButtonText}>Create Incoming Shipment</Text>
+                        <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>Create Incoming Shipment</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -636,39 +639,49 @@ export default function CreateIncomingShipmentScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    content: {
-        flex: 1,
-    },
-    section: {
-        padding: Spacing.lg,
-        margin: Spacing.md,
-        borderRadius: BorderRadius.lg,
-        ...Shadows.md,
-    },
+    // Custom styles that don't have CommonStyles equivalents
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: Spacing.md,
     },
-    sectionTitle: {
-        fontSize: Typography.sizes.xl,
+    lineItemNumber: {
+        fontSize: Typography.sizes.sm,
         fontWeight: Typography.weights.bold,
     },
-    label: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.medium,
-        marginTop: Spacing.md,
-        marginBottom: Spacing.xs,
+    removeButtonText: {
+        fontSize: Typography.sizes.sm,
+        fontWeight: Typography.weights.semibold,
     },
-    input: {
+    lineItemName: {
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.bold,
+        marginBottom: Spacing.xs / 2,
+    },
+    lineItemSKU: {
+        fontSize: Typography.sizes.sm,
+        fontFamily: 'monospace',
+        marginBottom: Spacing.xs / 2,
+    },
+    lineItemQuantity: {
+        fontSize: Typography.sizes.sm,
+        fontWeight: Typography.weights.medium,
+    },
+    pickerButton: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         borderWidth: 1,
         borderRadius: BorderRadius.md,
         padding: Spacing.md,
+    },
+    pickerButtonText: {
         fontSize: Typography.sizes.md,
+        flex: 1,
+    },
+    pickerArrow: {
+        fontSize: 24,
     },
     inputWithIcon: {
         flexDirection: 'row',
@@ -691,101 +704,10 @@ const styles = StyleSheet.create({
     scanButtonText: {
         fontSize: 24,
     },
-    textArea: {
-        minHeight: 80,
-        textAlignVertical: 'top',
-    },
-    addButton: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        borderRadius: BorderRadius.md,
-    },
-    addButtonText: {
-        color: '#fff',
-        fontSize: Typography.sizes.sm,
-        fontWeight: Typography.weights.bold,
-    },
-    emptyText: {
-        padding: Spacing.lg,
-        textAlign: 'center',
-        fontSize: Typography.sizes.md,
-    },
-    lineItemCard: {
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        marginBottom: Spacing.sm,
-    },
-    lineItemHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: Spacing.xs,
-    },
-    lineItemNumber: {
-        fontSize: Typography.sizes.sm,
-        fontWeight: Typography.weights.bold,
-    },
-    removeButton: {
-        padding: Spacing.xs,
-    },
-    removeButtonText: {
-        fontSize: Typography.sizes.sm,
-        fontWeight: Typography.weights.semibold,
-    },
-    lineItemName: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.bold,
-        marginBottom: Spacing.xs / 2,
-    },
-    lineItemSKU: {
-        fontSize: Typography.sizes.sm,
-        fontFamily: 'monospace',
-        marginBottom: Spacing.xs / 2,
-    },
-    lineItemQuantity: {
-        fontSize: Typography.sizes.sm,
-        fontWeight: Typography.weights.medium,
-    },
-    addLineItemForm: {
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        marginTop: Spacing.md,
-    },
-    formTitle: {
-        fontSize: Typography.sizes.lg,
-        fontWeight: Typography.weights.bold,
-        marginBottom: Spacing.md,
-    },
-    pickerButton: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.md,
-    },
-    pickerButtonText: {
-        fontSize: Typography.sizes.md,
-        flex: 1,
-    },
-    pickerArrow: {
-        fontSize: 24,
-    },
     formButtons: {
         flexDirection: 'row',
         gap: Spacing.sm,
         marginTop: Spacing.md,
-    },
-    formButton: {
-        flex: 1,
-        paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.md,
-        alignItems: 'center',
-        borderWidth: 1,
-    },
-    formButtonText: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.semibold,
     },
     summary: {
         margin: Spacing.md,
@@ -802,67 +724,26 @@ const styles = StyleSheet.create({
         padding: Spacing.md,
         borderTopWidth: 1,
     },
-    submitButton: {
-        paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.md,
-        alignItems: 'center',
-        ...Shadows.md,
-    },
-    submitButtonText: {
-        color: '#fff',
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.bold,
-    },
     disabledButton: {
         opacity: 0.5,
     },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalContainer: {
+    // Modal styles - fixed for mobile
+    modalContainerFixed: {
         height: '80%',
         borderTopLeftRadius: BorderRadius.xl,
         borderTopRightRadius: BorderRadius.xl,
         ...Shadows.lg,
+        overflow: 'hidden',
     },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: Spacing.lg,
-        borderBottomWidth: 1,
-    },
-    modalTitle: {
-        fontSize: Typography.sizes.xl,
-        fontWeight: Typography.weights.bold,
+    modalScrollView: {
+        flex: 1,
     },
     closeButton: {
         fontSize: 24,
     },
     searchContainer: {
         padding: Spacing.md,
-        paddingBottom: 0,
-    },
-    searchInput: {
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-        fontSize: Typography.sizes.md,
-    },
-    modalContent: {
-        flex: 1,
-    },
-    itemTypeOption: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: Spacing.lg,
-        borderBottomWidth: 1,
-    },
-    itemTypeInfo: {
-        flex: 1,
+        paddingBottom: Spacing.sm,
     },
     itemTypeName: {
         fontSize: Typography.sizes.md,
@@ -876,57 +757,9 @@ const styles = StyleSheet.create({
         fontSize: 24,
         marginLeft: Spacing.md,
     },
-    // Camera Scanner Styles
-    cameraContainer: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    camera: {
-        flex: 1,
-    },
-    cameraOverlay: {
-        flex: 1,
-        backgroundColor: 'transparent',
-        justifyContent: 'space-between',
-        padding: Spacing.xl,
-    },
-    cameraHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: Spacing.xl,
-    },
-    cameraTitle: {
-        color: '#fff',
-        fontSize: Typography.sizes.lg,
-        fontWeight: Typography.weights.bold,
-    },
-    cameraCancelButton: {
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        borderRadius: BorderRadius.md,
-    },
     cameraCancelText: {
         color: '#fff',
         fontSize: Typography.sizes.md,
         fontWeight: Typography.weights.semibold,
-    },
-    scanFrame: {
-        width: 280,
-        height: 200,
-        borderWidth: 2,
-        borderColor: '#0093B2',
-        borderRadius: BorderRadius.md,
-        alignSelf: 'center',
-        backgroundColor: 'transparent',
-    },
-    cameraInstructions: {
-        color: '#fff',
-        fontSize: Typography.sizes.md,
-        textAlign: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
     },
 });

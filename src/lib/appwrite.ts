@@ -1,9 +1,17 @@
 import { Client, Databases, Account, Models, Query, ID } from 'appwrite';
+import { Platform } from 'react-native';
 
 const client = new Client();
 
+// Use HTTPS for web (with accepted self-signed certificate)
+// Use HTTP for mobile (development only - bypasses certificate issues)
+const endpoint = Platform.select({
+    web: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT || 'https://10.2.1.47/v1',
+    default: 'http://10.2.1.47:8081/v1'
+});
+
 client
-    .setEndpoint(process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT || '')
+    .setEndpoint(endpoint)
     .setProject(process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID || '');
 
 export const databases = new Databases(client);

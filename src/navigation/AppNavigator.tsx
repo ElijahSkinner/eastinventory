@@ -239,7 +239,10 @@ function CustomDrawerContent(props: any) {
                                 <DrawerItem
                                     label="Dashboard"
                                     icon="🏠"
-                                    onPress={() => props.navigation.navigate('Dashboard')}
+                                    onPress={() => {
+                                        props.navigation.navigate('Dashboard');
+                                        updateUserSettings({ last_section: 'procurement' }).catch(console.error);
+                                    }}
                                     active={props.state.routes[props.state.index]?.name === 'Dashboard'}
                                 />
                                 <DrawerItem
@@ -400,15 +403,21 @@ function MainDrawer() {
         const hasProcurementAccess = isAdmin || labels.includes('procurement');
         const hasInventoryAccess = isAdmin || labels.includes('inventory');
 
+        // If user has a saved preference and has access to that section, use it
         if (lastSection === 'procurement' && hasProcurementAccess) {
-            return 'ProcurementStack';
+            return 'Dashboard'; // HomeScreen - Procurement Dashboard
         } else if (lastSection === 'inventory' && hasInventoryAccess) {
-            return 'OfficeInventoryStack';
-        } else if (hasProcurementAccess) {
-            return 'ProcurementStack';
-        } else if (hasInventoryAccess) {
-            return 'OfficeInventoryStack';
+            return 'OfficeInventoryStack'; // Opens to OfficeSuppliesHome
         }
+
+        // If no saved preference, default based on what they have access to
+        if (hasProcurementAccess) {
+            return 'Dashboard'; // Default to Procurement Dashboard
+        } else if (hasInventoryAccess) {
+            return 'OfficeInventoryStack'; // Default to Office Inventory Dashboard
+        }
+
+        // Fallback (shouldn't reach here if permissions are set correctly)
         return 'Dashboard';
     };
 
