@@ -1,10 +1,10 @@
-// src/screens/HomeScreen.tsx (Fixed Navigation)
+// src/screens/HomeScreen.tsx (Refactored with CommonStyles)
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { DrawerNavigationProp } from '@react-navigation/drawer';
-import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
+import { Typography, Spacing, BorderRadius, Shadows, CommonStyles } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { databases, DATABASE_ID, COLLECTIONS } from '../lib/appwrite';
@@ -106,7 +106,7 @@ export default function HomeScreen() {
         loadDashboardStats();
     };
 
-    // ✅ FIX: Navigate to nested routes in ProcurementStack
+    // Navigate to nested routes in ProcurementStack
     const menuItems = [
         {
             title: 'Incoming Shipments',
@@ -156,25 +156,25 @@ export default function HomeScreen() {
 
     return (
         <ScrollView
-            style={{ flex: 1, backgroundColor: colors.background.secondary }}
+            style={[CommonStyles.containers.flex, { backgroundColor: colors.background.secondary }]}
             contentContainerStyle={{ padding: Spacing.lg }}
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
             }
         >
             {/* Welcome Section */}
-            <View style={[styles.welcomeCard, { backgroundColor: colors.background.primary }]}>
-                <Text style={[styles.welcomeText, { color: colors.primary.cyan }]}>
+            <View style={[CommonStyles.cards.base, { backgroundColor: colors.background.primary, alignItems: 'center' }]}>
+                <Text style={[CommonStyles.headers.title, { color: colors.primary.cyan, textAlign: 'center' }]}>
                     Welcome, {user?.name}!
                 </Text>
-                <Text style={[styles.tagline, { color: colors.text.secondary }]}>
+                <Text style={[CommonStyles.headers.subtitle, { color: colors.text.secondary, fontStyle: 'italic', textAlign: 'center' }]}>
                     Education Accelerated by Service and Technology
                 </Text>
             </View>
 
             {/* Quick Stats */}
             {loading ? (
-                <View style={[styles.statsCard, { backgroundColor: colors.background.primary }]}>
+                <View style={[CommonStyles.cards.base, { backgroundColor: colors.background.primary }]}>
                     <ActivityIndicator size="small" color={colors.primary.cyan} />
                 </View>
             ) : (
@@ -248,10 +248,11 @@ export default function HomeScreen() {
                     <TouchableOpacity
                         key={index}
                         style={[
-                            styles.menuCard,
+                            CommonStyles.cards.interactive,
                             {
                                 backgroundColor: colors.background.primary,
-                                borderLeftColor: item.color
+                                borderLeftColor: item.color,
+                                borderLeftWidth: 4,
                             }
                         ]}
                         onPress={() => {
@@ -264,7 +265,7 @@ export default function HomeScreen() {
                         activeOpacity={0.7}
                     >
                         <View style={styles.menuCardContent}>
-                            <Text style={styles.menuIcon}>{item.icon}</Text>
+                            <Text style={CommonStyles.icons.xxlarge}>{item.icon}</Text>
                             <View style={styles.menuTextContainer}>
                                 <Text style={[styles.menuTitle, { color: colors.primary.coolGray }]}>
                                     {item.title}
@@ -273,15 +274,16 @@ export default function HomeScreen() {
                                     {item.description}
                                 </Text>
                             </View>
-                        </View>
 
-                        {item.badge && (
-                            <View style={[styles.badge, { backgroundColor: item.color }]}>
-                                <Text style={styles.badgeText}>{item.badge}</Text>
+                            <View style={styles.menuRightSection}>
+                                {item.badge && (
+                                    <View style={[CommonStyles.badges.pill, { backgroundColor: item.color }]}>
+                                        <Text style={[CommonStyles.badges.text, { color: '#fff' }]}>{item.badge}</Text>
+                                    </View>
+                                )}
+                                <Text style={[styles.arrow, { color: colors.text.secondary }]}>›</Text>
                             </View>
-                        )}
-
-                        <Text style={[styles.arrow, { color: colors.text.secondary }]}>›</Text>
+                        </View>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -303,23 +305,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-    welcomeCard: {
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.lg,
-        marginBottom: Spacing.lg,
-        ...Shadows.sm,
-        alignItems: 'center',
-    },
-    welcomeText: {
-        fontSize: Typography.sizes.xxl,
-        fontWeight: Typography.weights.bold,
-        marginBottom: Spacing.xs,
-    },
-    tagline: {
-        fontSize: Typography.sizes.sm,
-        textAlign: 'center',
-        fontStyle: 'italic',
-    },
+    // Custom styles specific to HomeScreen
     statsCard: {
         padding: Spacing.lg,
         borderRadius: BorderRadius.lg,
@@ -334,14 +320,14 @@ const styles = StyleSheet.create({
     statsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: Spacing.md,
+        marginHorizontal: -Spacing.xs,
         marginBottom: Spacing.md,
     },
     statItem: {
-        flex: 1,
-        minWidth: '45%',
+        width: '50%',
         alignItems: 'center',
-        padding: Spacing.md,
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.xs,
     },
     statValue: {
         fontSize: Typography.sizes.xxxl,
@@ -349,7 +335,7 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.xs,
     },
     statLabel: {
-        fontSize: Typography.sizes.sm,
+        fontSize: Typography.sizes.xs,
         textAlign: 'center',
     },
     inventoryBreakdown: {
@@ -372,53 +358,29 @@ const styles = StyleSheet.create({
     menuContainer: {
         gap: Spacing.md,
     },
-    menuCard: {
-        borderRadius: BorderRadius.lg,
-        padding: Spacing.lg,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        ...Shadows.md,
-        borderLeftWidth: 4,
-        position: 'relative',
-    },
     menuCardContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1,
-    },
-    menuIcon: {
-        fontSize: 40,
-        marginRight: Spacing.md,
+        gap: Spacing.md,
     },
     menuTextContainer: {
         flex: 1,
     },
+    menuRightSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+    },
     menuTitle: {
         fontSize: Typography.sizes.lg,
         fontWeight: Typography.weights.bold,
-        marginBottom: Spacing.xs,
+        marginBottom: Spacing.xs / 2,
     },
     menuDescription: {
         fontSize: Typography.sizes.sm,
     },
-    badge: {
-        minWidth: 24,
-        height: 24,
-        borderRadius: BorderRadius.full,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: Spacing.xs,
-        marginRight: Spacing.sm,
-    },
-    badgeText: {
-        color: '#fff',
-        fontSize: Typography.sizes.xs,
-        fontWeight: Typography.weights.bold,
-    },
     arrow: {
         fontSize: 30,
-        marginLeft: Spacing.sm,
     },
     footer: {
         marginTop: Spacing.xl,

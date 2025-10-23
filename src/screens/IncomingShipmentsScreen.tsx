@@ -26,7 +26,7 @@ import {
     formatDate,
 } from '../lib/appwrite';
 import { Query } from 'appwrite';
-import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
+import { Typography, Spacing, BorderRadius, Shadows, CommonStyles } from '../theme';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProcurementStackParamList, RootStackParamList } from '../navigation/AppNavigator';
@@ -54,7 +54,7 @@ export default function IncomingShipmentsScreen() {
     useFocusEffect(
         useCallback(() => {
             loadIncomingShipments();
-        }, [filterStatus, searchQuery])
+        }, [filterStatus])
     );
 
     const loadIncomingShipments = async () => {
@@ -96,7 +96,7 @@ export default function IncomingShipmentsScreen() {
     const handleRefresh = useCallback(() => {
         setRefreshing(true);
         loadIncomingShipments();
-    }, [filterStatus, searchQuery]);
+    }, [filterStatus]);
 
     const handleExpandPO = async (poId: string) => {
         if (expandedSHId === poId) {
@@ -173,51 +173,71 @@ export default function IncomingShipmentsScreen() {
 
     if (loading) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+            <View style={[CommonStyles.containers.centered, { backgroundColor: colors.background.secondary }]}>
                 <ActivityIndicator size="large" color={colors.primary.cyan} />
             </View>
         );
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+        <View style={[CommonStyles.containers.flex, { backgroundColor: colors.background.secondary }]}>
             {/* Header with Admin Badge */}
-            <View style={[styles.headerContainer, { backgroundColor: colors.background.primary }]}>
-                <Text style={[styles.headerTitle, { color: colors.primary.coolGray }]}>
+            <View style={[CommonStyles.headers.container, { backgroundColor: colors.background.primary }]}>
+                <Text style={[CommonStyles.headers.title, { color: colors.primary.coolGray }]}>
                     Incoming Shipments
                 </Text>
                 {isAdmin && (
-                    <View style={[styles.roleBadge, { backgroundColor: '#e74c3c' }]}>
-                        <Text style={styles.roleBadgeText}>👑 Admin</Text>
+                    <View style={[CommonStyles.badges.pill, { backgroundColor: '#e74c3c' }]}>
+                        <Text style={[CommonStyles.badges.text, { color: '#fff' }]}>👑 Admin</Text>
                     </View>
                 )}
             </View>
 
             {/* Search and Filter */}
             <View style={[styles.searchContainer, { backgroundColor: colors.background.primary }]}>
-                <TextInput
-                    style={[
-                        styles.searchInput,
-                        { color: colors.text.primary, borderColor: colors.ui.border },
-                    ]}
-                    placeholder="Search by PO# or vendor..."
-                    placeholderTextColor={colors.text.secondary}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    onSubmitEditing={loadIncomingShipments}
-                />
+                <View style={styles.searchRow}>
+                    <TextInput
+                        style={[
+                            CommonStyles.inputs.search,
+                            {
+                                color: colors.text.primary,
+                                borderColor: colors.ui.border,
+                                flex: 1,
+                            },
+                        ]}
+                        placeholder="Search by SH# or vendor..."
+                        placeholderTextColor={colors.text.secondary}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onSubmitEditing={loadIncomingShipments}
+                        returnKeyType="search"
+                    />
+                    <TouchableOpacity
+                        style={[CommonStyles.buttons.primary, { backgroundColor: colors.primary.cyan, marginLeft: Spacing.sm }]}
+                        onPress={loadIncomingShipments}
+                    >
+                        <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>🔍</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {/* Status Filter Tabs */}
             <View style={[styles.filterContainer, { backgroundColor: colors.background.primary }]}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {['all', 'ordered', 'partially_received', 'fully_received'].map((status) => (
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: Spacing.md }}
+                >
+                    {['all', 'ordered', 'partially_received', 'fully_received'].map((status, index) => (
                         <TouchableOpacity
                             key={status}
                             style={[
                                 styles.filterTab,
-                                filterStatus === status && {
-                                    backgroundColor: colors.primary.cyan,
+                                {
+                                    backgroundColor: filterStatus === status
+                                        ? colors.primary.cyan
+                                        : 'transparent',
+                                    marginRight: index < 3 ? Spacing.sm : 0,
                                 },
                             ]}
                             onPress={() => setFilterStatus(status)}
@@ -246,43 +266,42 @@ export default function IncomingShipmentsScreen() {
                 </ScrollView>
             </View>
 
-            {/* SH List */}
+            {/* List */}
             <ScrollView
-                style={styles.listContainer}
+                style={CommonStyles.containers.flex}
+                contentContainerStyle={{ padding: Spacing.md }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
             >
                 {IncomingShipments.length === 0 ? (
-                    <View style={styles.emptyState}>
-                        <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-                            {searchQuery ? 'No Incoming Shipments match your search' : 'No Incoming Shipments yet'}
+                    <View style={CommonStyles.empty.container}>
+                        <Text style={CommonStyles.empty.emoji}>📦</Text>
+                        <Text style={[CommonStyles.empty.text, { color: colors.primary.coolGray }]}>
+                            No Incoming Shipments found
+                        </Text>
+                        <Text style={[CommonStyles.empty.subtext, { color: colors.text.secondary }]}>
+                            {searchQuery || filterStatus !== 'all'
+                                ? 'Try adjusting your filters'
+                                : 'Create a new Incoming Shipment to get started'}
                         </Text>
                     </View>
                 ) : (
                     IncomingShipments.map((sh) => {
+                        const isExpanded = expandedSHId === sh.$id;
                         const progress = calculateSHProgress(sh);
-                        const statusColor = getStatusColor(sh.order_status);
 
                         return (
                             <View key={sh.$id} style={styles.shContainer}>
-                                {/* sh Card */}
                                 <TouchableOpacity
-                                    style={[
-                                        styles.shCard,
-                                        { backgroundColor: colors.background.primary },
-                                    ]}
+                                    style={[CommonStyles.cards.interactive, { backgroundColor: colors.background.primary }]}
                                     onPress={() => handleExpandPO(sh.$id)}
                                     activeOpacity={0.7}
                                 >
+                                    {/* Header */}
                                     <View style={styles.shHeader}>
                                         <View style={styles.shTitleRow}>
-                                            <Text style={styles.statusIcon}>{getStatusIcon(sh.order_status)}</Text>
+                                            <Text style={CommonStyles.icons.large}>{getStatusIcon(sh.order_status)}</Text>
                                             <View style={styles.shInfo}>
-                                                <Text
-                                                    style={[
-                                                        styles.shNumber,
-                                                        { color: colors.primary.coolGray },
-                                                    ]}
-                                                >
+                                                <Text style={[styles.shNumber, { color: colors.text.primary }]}>
                                                     {sh.po_number}
                                                 </Text>
                                                 <Text style={[styles.vendor, { color: colors.text.secondary }]}>
@@ -291,35 +310,25 @@ export default function IncomingShipmentsScreen() {
                                             </View>
                                         </View>
 
-                                        <View
-                                            style={[
-                                                styles.statusBadge,
-                                                { backgroundColor: `${statusColor}20` },
-                                            ]}
-                                        >
-                                            <Text style={[styles.statusText, { color: statusColor }]}>
+                                        <View style={[CommonStyles.badges.base, { backgroundColor: `${getStatusColor(sh.order_status)}20` }]}>
+                                            <Text style={[CommonStyles.badges.text, { color: getStatusColor(sh.order_status) }]}>
                                                 {getStatusLabel(sh.order_status)}
                                             </Text>
                                         </View>
                                     </View>
 
                                     {/* Progress */}
-                                    <View style={styles.progressContainer}>
-                                        <Text style={[styles.progressText, { color: colors.text.secondary }]}>
-                                            {sh.received_items} of {sh.total_items} items received ({progress}%)
+                                    <View style={CommonStyles.progress.container}>
+                                        <Text style={[CommonStyles.progress.text, { color: colors.text.secondary }]}>
+                                            {sh.received_items} of {sh.total_items} items received
                                         </Text>
-                                        <View
-                                            style={[
-                                                styles.progressBar,
-                                                { backgroundColor: colors.ui.border },
-                                            ]}
-                                        >
+                                        <View style={[CommonStyles.progress.bar, { backgroundColor: colors.ui.border }]}>
                                             <View
                                                 style={[
-                                                    styles.progressFill,
+                                                    CommonStyles.progress.fill,
                                                     {
                                                         width: `${progress}%`,
-                                                        backgroundColor: statusColor,
+                                                        backgroundColor: progress === 100 ? '#27ae60' : colors.primary.cyan,
                                                     },
                                                 ]}
                                             />
@@ -328,17 +337,16 @@ export default function IncomingShipmentsScreen() {
 
                                     <Text style={[styles.orderDate, { color: colors.text.secondary }]}>
                                         Ordered: {formatDate(sh.order_date)}
+                                        {sh.expected_delivery && ` • Expected: ${formatDate(sh.expected_delivery)}`}
                                     </Text>
 
-                                    <Text
-                                        style={[styles.expandIcon, { color: colors.text.secondary }]}
-                                    >
-                                        {expandedSHId === sh.$id ? '˅' : '›'}
+                                    <Text style={[styles.expandIcon, { color: colors.text.secondary }]}>
+                                        {isExpanded ? '▼' : '▶'}
                                     </Text>
                                 </TouchableOpacity>
 
                                 {/* Expanded Line Items */}
-                                {expandedSHId === sh.$id && (
+                                {isExpanded && (
                                     <View
                                         style={[
                                             styles.lineItemsContainer,
@@ -348,20 +356,11 @@ export default function IncomingShipmentsScreen() {
                                         {loadingLineItems ? (
                                             <ActivityIndicator size="small" color={colors.primary.cyan} />
                                         ) : lineItems.length === 0 ? (
-                                            <Text
-                                                style={[
-                                                    styles.emptyLineItems,
-                                                    { color: colors.text.secondary },
-                                                ]}
-                                            >
-                                                No line items
+                                            <Text style={[styles.emptyLineItems, { color: colors.text.secondary }]}>
+                                                No line items found
                                             </Text>
                                         ) : (
                                             lineItems.map((lineItem) => {
-                                                const lineProgress = Math.round(
-                                                    (lineItem.quantity_received / lineItem.quantity_ordered) *
-                                                    100
-                                                );
                                                 const isComplete =
                                                     lineItem.quantity_received >= lineItem.quantity_ordered;
 
@@ -369,7 +368,7 @@ export default function IncomingShipmentsScreen() {
                                                     <View
                                                         key={lineItem.$id}
                                                         style={[
-                                                            styles.lineItemCard,
+                                                            CommonStyles.cards.compact,
                                                             { backgroundColor: colors.background.primary },
                                                         ]}
                                                     >
@@ -403,23 +402,40 @@ export default function IncomingShipmentsScreen() {
                                                                     },
                                                                 ]}
                                                             >
-                                                                {isComplete ? '✓' : '⏳'}{' '}
-                                                                {lineItem.quantity_received} of{' '}
-                                                                {lineItem.quantity_ordered} received ({lineProgress}%)
+                                                                {isComplete ? '✓ Complete' : '⏳ In Progress'} •{' '}
+                                                                {lineItem.quantity_received} / {lineItem.quantity_ordered}
                                                             </Text>
+
+                                                            <View style={[CommonStyles.progress.bar, { backgroundColor: colors.ui.border }]}>
+                                                                <View
+                                                                    style={[
+                                                                        CommonStyles.progress.fill,
+                                                                        {
+                                                                            width: `${Math.round(
+                                                                                (lineItem.quantity_received /
+                                                                                    lineItem.quantity_ordered) *
+                                                                                100
+                                                                            )}%`,
+                                                                            backgroundColor: isComplete
+                                                                                ? '#27ae60'
+                                                                                : colors.primary.cyan,
+                                                                        },
+                                                                    ]}
+                                                                />
+                                                            </View>
                                                         </View>
 
                                                         {!isComplete && (
                                                             <TouchableOpacity
                                                                 style={[
-                                                                    styles.receiveButton,
+                                                                    CommonStyles.buttons.primary,
                                                                     { backgroundColor: colors.primary.cyan },
                                                                 ]}
                                                                 onPress={() => {
                                                                     navigation.navigate('Receiving', { sku: lineItem.sku });
                                                                 }}
                                                             >
-                                                                <Text style={styles.receiveButtonText}>
+                                                                <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>
                                                                     Receive More Items
                                                                 </Text>
                                                             </TouchableOpacity>
@@ -439,7 +455,7 @@ export default function IncomingShipmentsScreen() {
             {/* Create PO Button (Admin only) */}
             {isAdmin && (
                 <TouchableOpacity
-                    style={[styles.createButton, { backgroundColor: colors.primary.cyan }]}
+                    style={[CommonStyles.buttons.fab, { backgroundColor: colors.primary.cyan }]}
                     onPress={() => {
                         // Use CommonActions to navigate to root stack
                         navigation.dispatch(
@@ -449,7 +465,7 @@ export default function IncomingShipmentsScreen() {
                         );
                     }}
                 >
-                    <Text style={styles.createButtonText}>+ New Incoming Shipment</Text>
+                    <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>+ New Incoming Shipment</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -457,74 +473,30 @@ export default function IncomingShipmentsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    headerContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: Spacing.lg,
-        ...Shadows.sm,
-    },
-    headerTitle: {
-        fontSize: Typography.sizes.xxl,
-        fontWeight: Typography.weights.bold,
-    },
-    roleBadge: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.xs,
-        borderRadius: BorderRadius.full,
-    },
-    roleBadgeText: {
-        color: '#fff',
-        fontWeight: Typography.weights.bold,
-        fontSize: Typography.sizes.xs,
-    },
+    // Custom styles specific to IncomingShipmentsScreen
     searchContainer: {
         padding: Spacing.md,
         ...Shadows.sm,
     },
-    searchInput: {
-        borderWidth: 1,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.md,
-        fontSize: Typography.sizes.md,
+    searchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     filterContainer: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
+        paddingVertical: Spacing.md,
         ...Shadows.sm,
     },
     filterTab: {
-        paddingHorizontal: Spacing.md,
+        paddingHorizontal: Spacing.lg,
         paddingVertical: Spacing.sm,
         borderRadius: BorderRadius.full,
-        marginRight: Spacing.sm,
     },
     filterTabText: {
         fontSize: Typography.sizes.sm,
         fontWeight: Typography.weights.semibold,
     },
-    listContainer: {
-        flex: 1,
-        padding: Spacing.md,
-    },
-    emptyState: {
-        padding: Spacing.xl,
-        alignItems: 'center',
-    },
-    emptyText: {
-        fontSize: Typography.sizes.md,
-    },
     shContainer: {
         marginBottom: Spacing.md,
-    },
-    shCard: {
-        borderRadius: BorderRadius.lg,
-        padding: Spacing.lg,
-        ...Shadows.md,
-        position: 'relative',
     },
     shHeader: {
         flexDirection: 'row',
@@ -536,10 +508,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
-    },
-    statusIcon: {
-        fontSize: 24,
-        marginRight: Spacing.sm,
+        gap: Spacing.sm,
     },
     shInfo: {
         flex: 1,
@@ -551,31 +520,6 @@ const styles = StyleSheet.create({
     },
     vendor: {
         fontSize: Typography.sizes.md,
-    },
-    statusBadge: {
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: Spacing.xs / 2,
-        borderRadius: BorderRadius.sm,
-    },
-    statusText: {
-        fontSize: Typography.sizes.xs,
-        fontWeight: Typography.weights.semibold,
-    },
-    progressContainer: {
-        marginBottom: Spacing.sm,
-    },
-    progressText: {
-        fontSize: Typography.sizes.sm,
-        marginBottom: Spacing.xs,
-    },
-    progressBar: {
-        height: 8,
-        borderRadius: BorderRadius.sm,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: BorderRadius.sm,
     },
     orderDate: {
         fontSize: Typography.sizes.sm,
@@ -598,11 +542,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: Typography.sizes.sm,
     },
-    lineItemCard: {
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        ...Shadows.sm,
-    },
     lineItemHeader: {
         marginBottom: Spacing.sm,
     },
@@ -621,29 +560,6 @@ const styles = StyleSheet.create({
     lineItemStatus: {
         fontSize: Typography.sizes.sm,
         fontWeight: Typography.weights.medium,
-    },
-    receiveButton: {
-        padding: Spacing.sm,
-        borderRadius: BorderRadius.md,
-        alignItems: 'center',
-    },
-    receiveButtonText: {
-        color: '#fff',
-        fontSize: Typography.sizes.sm,
-        fontWeight: Typography.weights.semibold,
-    },
-    createButton: {
-        position: 'absolute',
-        bottom: Spacing.lg,
-        right: Spacing.lg,
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.full,
-        ...Shadows.lg,
-    },
-    createButtonText: {
-        color: '#fff',
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.bold,
+        marginBottom: Spacing.xs,
     },
 });
