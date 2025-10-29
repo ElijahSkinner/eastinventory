@@ -60,7 +60,7 @@ export default function ScanInScreen() {
                 // Use native confirm/alert for both platforms
                 const message = `Found: ${itemType.item_name}\n\nCurrent quantity: ${currentQuantity}\n\nAdd another item?`;
 
-                // Auto-add on mobile for simplicity (you can change this later)
+                // Auto-add on mobile for simplicity
                 // Or use a proper confirmation modal
                 await addInventoryItem(data, itemType.$id, itemType.item_name);
 

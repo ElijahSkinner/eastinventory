@@ -22,7 +22,7 @@ import {
     IncomingShipment,
 } from '../lib/appwrite';
 import { Query, ID } from 'appwrite';
-import { Typography, Spacing, BorderRadius, Shadows } from '../theme';
+import { Typography, Spacing, BorderRadius, CommonStyles } from '../theme';
 
 interface ReceivingSession {
     sku: string;
@@ -97,6 +97,7 @@ export default function ReceivingScreen({ route }: any) {
             setProcessing(false);
         }
     };
+
     const handleSKUScan = async (sku: string) => {
         setScanning(false);
         setProcessing(true);
@@ -174,7 +175,6 @@ export default function ReceivingScreen({ route }: any) {
             setProcessing(false);
         }
     };
-
 
     const handleBarcodeScanned = ({ data }: { data: string }) => {
         if (!scanning) return;
@@ -268,7 +268,7 @@ export default function ReceivingScreen({ route }: any) {
                 }
             );
 
-            // ===== FIX #1: Update PO totals based on LINE ITEMS after update =====
+            // Update PO totals based on LINE ITEMS after update
             const allLineItems = await databases.listDocuments(
                 DATABASE_ID,
                 COLLECTIONS.po_LINE_ITEMS,
@@ -343,27 +343,27 @@ export default function ReceivingScreen({ route }: any) {
     // Camera Scanner View
     if (scanning) {
         return (
-            <View style={styles.cameraContainer}>
+            <View style={CommonStyles.camera.container}>
                 <CameraView
-                    style={styles.camera}
+                    style={CommonStyles.camera.camera}
                     facing="back"
                     onBarcodeScanned={handleBarcodeScanned}
                     barcodeScannerSettings={{
                         barcodeTypes: ['code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e', 'qr'],
                     }}
                 >
-                    <View style={styles.cameraOverlay}>
-                        <View style={styles.cameraHeader}>
-                            <Text style={styles.cameraTitle}>Scan SKU Barcode</Text>
+                    <View style={CommonStyles.camera.overlay}>
+                        <View style={CommonStyles.camera.header}>
+                            <Text style={CommonStyles.camera.title}>Scan SKU Barcode</Text>
                             <TouchableOpacity
-                                style={styles.cameraCancelButton}
+                                style={CommonStyles.camera.cancelButton}
                                 onPress={() => setScanning(false)}
                             >
                                 <Text style={styles.cameraCancelText}>Cancel</Text>
                             </TouchableOpacity>
                         </View>
-                        <View style={[styles.scanFrame, { borderColor: colors.primary.cyan }]} />
-                        <Text style={styles.cameraInstructions}>
+                        <View style={[CommonStyles.camera.scanFrame, { borderColor: colors.primary.cyan }]} />
+                        <Text style={CommonStyles.camera.instructions}>
                             Position the SKU barcode within the frame
                         </Text>
                     </View>
@@ -377,7 +377,7 @@ export default function ReceivingScreen({ route }: any) {
         const remaining = receivingSession.SHLineItem.quantity_ordered - receivingSession.SHLineItem.quantity_received;
 
         return (
-            <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+            <View style={[CommonStyles.containers.flex, { backgroundColor: colors.background.secondary }]}>
                 <ScrollView style={styles.sessionContainer}>
                     {/* Success Header */}
                     <View style={[styles.successHeader, { backgroundColor: colors.primary.cyan }]}>
@@ -386,7 +386,7 @@ export default function ReceivingScreen({ route }: any) {
                     </View>
 
                     {/* Item Details */}
-                    <View style={[styles.detailsCard, { backgroundColor: colors.background.primary }]}>
+                    <View style={[CommonStyles.cards.base, { backgroundColor: colors.background.primary }]}>
                         <Text style={[styles.itemName, { color: colors.primary.coolGray }]}>
                             {receivingSession.itemType.item_name}
                         </Text>
@@ -425,12 +425,13 @@ export default function ReceivingScreen({ route }: any) {
                     </View>
 
                     {/* Receiving Form */}
-                    <View style={[styles.formCard, { backgroundColor: colors.background.primary }]}>
-                        <Text style={[styles.formLabel, { color: colors.text.primary }]}>
-                            How many are you receiving? *
+                    <View style={[CommonStyles.cards.base, { backgroundColor: colors.background.primary }]}>
+                        <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
+                            How many are you receiving? <Text style={CommonStyles.forms.required}>*</Text>
                         </Text>
                         <TextInput
                             style={[
+                                CommonStyles.inputs.base,
                                 styles.quantityInput,
                                 {
                                     backgroundColor: colors.background.secondary,
@@ -445,12 +446,12 @@ export default function ReceivingScreen({ route }: any) {
                             placeholderTextColor={colors.text.secondary}
                         />
 
-                        <Text style={[styles.formLabel, { color: colors.text.primary, marginTop: Spacing.md }]}>
+                        <Text style={[CommonStyles.forms.label, { color: colors.text.primary }]}>
                             Location (optional)
                         </Text>
                         <TextInput
                             style={[
-                                styles.input,
+                                CommonStyles.inputs.base,
                                 {
                                     backgroundColor: colors.background.secondary,
                                     borderColor: colors.ui.border,
@@ -467,17 +468,21 @@ export default function ReceivingScreen({ route }: any) {
                     {/* Action Buttons */}
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
-                            style={[styles.cancelButton, { backgroundColor: colors.background.primary, borderColor: colors.ui.border }]}
+                            style={[
+                                CommonStyles.buttons.secondary,
+                                { backgroundColor: colors.background.primary, borderColor: colors.ui.border }
+                            ]}
                             onPress={handleCancelReceiving}
                             disabled={processing}
                         >
-                            <Text style={[styles.cancelButtonText, { color: colors.text.primary }]}>
+                            <Text style={[CommonStyles.buttons.text, { color: colors.text.primary }]}>
                                 Cancel
                             </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             style={[
+                                CommonStyles.buttons.primary,
                                 styles.receiveButton,
                                 { backgroundColor: colors.primary.cyan },
                                 processing && styles.disabledButton,
@@ -488,7 +493,7 @@ export default function ReceivingScreen({ route }: any) {
                             {processing ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
-                                <Text style={styles.receiveButtonText}>
+                                <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>
                                     Receive {quantityInput || '?'} Items
                                 </Text>
                             )}
@@ -502,7 +507,7 @@ export default function ReceivingScreen({ route }: any) {
     // Main Scanner View
     if (!permission) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+            <View style={[CommonStyles.containers.centered, { backgroundColor: colors.background.primary }]}>
                 <ActivityIndicator size="large" color={colors.primary.cyan} />
             </View>
         );
@@ -510,35 +515,41 @@ export default function ReceivingScreen({ route }: any) {
 
     if (!permission.granted) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+            <View style={[CommonStyles.containers.centered, { backgroundColor: colors.background.primary }]}>
                 <Text style={[styles.permissionText, { color: colors.text.primary }]}>
                     Camera permission is required to scan barcodes
                 </Text>
                 <TouchableOpacity
-                    style={[styles.button, { backgroundColor: colors.primary.cyan }]}
+                    style={[CommonStyles.buttons.primary, { backgroundColor: colors.primary.cyan }]}
                     onPress={requestPermission}
                 >
-                    <Text style={styles.buttonText}>Grant Permission</Text>
+                    <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>Grant Permission</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
-            <ScrollView style={styles.content}>
+        <View style={[CommonStyles.containers.flex, { backgroundColor: colors.background.secondary }]}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* Scanner Section */}
-                <View style={[styles.scannerCard, { backgroundColor: colors.background.primary }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
+                <View style={[CommonStyles.sections.container, {
+                    backgroundColor: colors.background.primary,
+                    marginBottom: Spacing.md,
+                }]}>
+                    <Text style={[CommonStyles.sections.title, { color: colors.primary.coolGray }]}>
                         📦 Receive Items
                     </Text>
 
                     <TouchableOpacity
-                        style={[styles.scanButton, { backgroundColor: colors.primary.cyan }]}
+                        style={[CommonStyles.buttons.primary, {
+                            backgroundColor: colors.primary.cyan,
+                            marginBottom: Spacing.md,
+                        }]}
                         onPress={() => setScanning(true)}
                         disabled={processing}
                     >
-                        <Text style={styles.scanButtonText}>📷 Scan SKU Barcode</Text>
+                        <Text style={[CommonStyles.buttons.text, { color: '#fff' }]}>📷 Scan SKU Barcode</Text>
                     </TouchableOpacity>
 
                     <Text style={[styles.orText, { color: colors.text.secondary }]}>
@@ -548,6 +559,7 @@ export default function ReceivingScreen({ route }: any) {
                     <View style={styles.manualInputRow}>
                         <TextInput
                             style={[
+                                CommonStyles.inputs.base,
                                 styles.manualInput,
                                 {
                                     backgroundColor: colors.background.secondary,
@@ -562,11 +574,14 @@ export default function ReceivingScreen({ route }: any) {
                             onSubmitEditing={handleManualSKUSubmit}
                         />
                         <TouchableOpacity
-                            style={[styles.submitButton, { backgroundColor: colors.primary.cyan }]}
+                            style={[styles.submitButton, {
+                                backgroundColor: colors.primary.cyan,
+                                opacity: (processing || !manualSKU.trim()) ? 0.5 : 1
+                            }]}
                             onPress={handleManualSKUSubmit}
                             disabled={processing || !manualSKU.trim()}
                         >
-                            <Text style={styles.submitButtonText}>→</Text>
+                            <Text style={[CommonStyles.buttons.text, styles.submitButtonText]}>→</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -581,8 +596,8 @@ export default function ReceivingScreen({ route }: any) {
 
                 {/* Recent Receipts */}
                 {recentReceipts.length > 0 && (
-                    <View style={[styles.recentCard, { backgroundColor: colors.background.primary }]}>
-                        <Text style={[styles.sectionTitle, { color: colors.primary.coolGray }]}>
+                    <View style={[CommonStyles.sections.container, { backgroundColor: colors.background.primary }]}>
+                        <Text style={[CommonStyles.sections.title, { color: colors.primary.coolGray }]}>
                             Recent Scans
                         </Text>
 
@@ -590,12 +605,12 @@ export default function ReceivingScreen({ route }: any) {
                             <View
                                 key={index}
                                 style={[
-                                    styles.recentItem,
+                                    CommonStyles.lists.item,
                                     { borderBottomColor: colors.ui.divider },
                                 ]}
                             >
                                 <Text style={styles.recentIcon}>✓</Text>
-                                <View style={styles.recentInfo}>
+                                <View style={CommonStyles.containers.flex}>
                                     <Text style={[styles.recentItemName, { color: colors.text.primary }]}>
                                         {receipt.itemName}
                                     </Text>
@@ -612,145 +627,9 @@ export default function ReceivingScreen({ route }: any) {
     );
 }
 
-// Styles remain the same as your original file
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    content: {
-        flex: 1,
+    scrollContent: {
         padding: Spacing.lg,
-    },
-    scannerCard: {
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.lg,
-        ...Shadows.md,
-        marginBottom: Spacing.md,
-    },
-    sectionTitle: {
-        fontSize: Typography.sizes.xl,
-        fontWeight: Typography.weights.bold,
-        marginBottom: Spacing.md,
-    },
-    scanButton: {
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.md,
-        alignItems: 'center',
-        ...Shadows.sm,
-        marginBottom: Spacing.md,
-    },
-    scanButtonText: {
-        color: '#fff',
-        fontSize: Typography.sizes.lg,
-        fontWeight: Typography.weights.bold,
-    },
-    orText: {
-        textAlign: 'center',
-        fontSize: Typography.sizes.sm,
-        marginBottom: Spacing.md,
-    },
-    manualInputRow: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-    },
-    manualInput: {
-        flex: 1,
-        borderWidth: 1,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.md,
-        fontSize: Typography.sizes.md,
-    },
-    submitButton: {
-        width: 50,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: BorderRadius.md,
-    },
-    submitButtonText: {
-        color: '#fff',
-        fontSize: 24,
-        fontWeight: Typography.weights.bold,
-    },
-    processingIndicator: {
-        marginTop: Spacing.md,
-    },
-    recentCard: {
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.lg,
-        ...Shadows.md,
-    },
-    recentItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: Spacing.md,
-        borderBottomWidth: 1,
-    },
-    recentIcon: {
-        fontSize: 20,
-        marginRight: Spacing.md,
-        color: '#27ae60',
-    },
-    recentInfo: {
-        flex: 1,
-    },
-    recentItemName: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.semibold,
-        marginBottom: Spacing.xs / 2,
-    },
-    recentSKU: {
-        fontSize: Typography.sizes.sm,
-    },
-    cameraContainer: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    camera: {
-        flex: 1,
-    },
-    cameraOverlay: {
-        flex: 1,
-        backgroundColor: 'transparent',
-        justifyContent: 'space-between',
-        padding: Spacing.xl,
-    },
-    cameraHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: Spacing.xl,
-    },
-    cameraTitle: {
-        color: '#fff',
-        fontSize: Typography.sizes.lg,
-        fontWeight: Typography.weights.bold,
-    },
-    cameraCancelButton: {
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        borderRadius: BorderRadius.md,
-    },
-    cameraCancelText: {
-        color: '#fff',
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.semibold,
-    },
-    scanFrame: {
-        width: 280,
-        height: 200,
-        borderWidth: 3,
-        borderRadius: BorderRadius.md,
-        alignSelf: 'center',
-        backgroundColor: 'transparent',
-    },
-    cameraInstructions: {
-        color: '#fff',
-        fontSize: Typography.sizes.md,
-        textAlign: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
     },
     sessionContainer: {
         flex: 1,
@@ -771,12 +650,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: Typography.sizes.lg,
         fontWeight: Typography.weights.bold,
-    },
-    detailsCard: {
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.lg,
-        ...Shadows.md,
-        marginBottom: Spacing.md,
     },
     itemName: {
         fontSize: Typography.sizes.xl,
@@ -807,58 +680,18 @@ const styles = StyleSheet.create({
         fontSize: Typography.sizes.xxl,
         fontWeight: Typography.weights.bold,
     },
-    formCard: {
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.lg,
-        ...Shadows.md,
-        marginBottom: Spacing.md,
-    },
-    formLabel: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.medium,
-        marginBottom: Spacing.sm,
-    },
     quantityInput: {
-        borderWidth: 1,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.lg,
         fontSize: Typography.sizes.xxl,
         textAlign: 'center',
         fontWeight: Typography.weights.bold,
-    },
-    input: {
-        borderWidth: 1,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.md,
-        fontSize: Typography.sizes.md,
     },
     actionButtons: {
         flexDirection: 'row',
         gap: Spacing.md,
         marginBottom: Spacing.xl,
     },
-    cancelButton: {
-        flex: 1,
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        alignItems: 'center',
-        borderWidth: 1,
-    },
-    cancelButtonText: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.semibold,
-    },
     receiveButton: {
         flex: 2,
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        alignItems: 'center',
-        ...Shadows.md,
-    },
-    receiveButtonText: {
-        color: '#fff',
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.bold,
     },
     disabledButton: {
         opacity: 0.6,
@@ -869,13 +702,48 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.lg,
         paddingHorizontal: Spacing.xl,
     },
-    button: {
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.xl,
-        borderRadius: BorderRadius.md,
-        ...Shadows.sm,
+    orText: {
+        textAlign: 'center',
+        fontSize: Typography.sizes.sm,
+        marginBottom: Spacing.md,
     },
-    buttonText: {
+    manualInputRow: {
+        flexDirection: 'row',
+        gap: Spacing.sm,
+    },
+    manualInput: {
+        flex: 1,
+    },
+    submitButton: {
+        width: 56,
+        height: 56,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: BorderRadius.md,
+    },
+    submitButtonText: {
+        color: '#fff',
+        fontSize: 28,
+        fontWeight: Typography.weights.bold,
+        lineHeight: 28,
+    },
+    processingIndicator: {
+        marginTop: Spacing.md,
+    },
+    recentIcon: {
+        fontSize: 20,
+        marginRight: Spacing.md,
+        color: '#27ae60',
+    },
+    recentItemName: {
+        fontSize: Typography.sizes.md,
+        fontWeight: Typography.weights.semibold,
+        marginBottom: Spacing.xs / 2,
+    },
+    recentSKU: {
+        fontSize: Typography.sizes.sm,
+    },
+    cameraCancelText: {
         color: '#fff',
         fontSize: Typography.sizes.md,
         fontWeight: Typography.weights.semibold,
