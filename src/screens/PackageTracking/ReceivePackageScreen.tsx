@@ -16,18 +16,34 @@ import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { databases, DATABASE_ID, ID } from '../../lib/appwrite';
+import { databases, DATABASE_ID, ID, COLLECTIONS } from '../../lib/appwrite';
 import { Query } from 'appwrite';
 import {
-    PackageSender,
-    PACKAGE_SENDERS,
     CARRIERS,
     generateTrackingNumber,
+    loadAllUsers,
+    loadAllTeams,
 } from '../../lib/packageTracking';
 import { Typography, Spacing, BorderRadius, Shadows } from '../../theme';
-import { users, teams } from '../../lib/appwrite';
-import { Models } from 'appwrite';
 
+// Common vendors list
+const COMMON_VENDORS = [
+    'Amazon',
+    'B&H Photo',
+    'CDW',
+    'Lenovo',
+    'Dell',
+    'HP',
+    'Apple',
+    'Best Buy',
+    'Newegg',
+    'Adorama',
+    'Walmart',
+    'Target',
+    'Office Depot',
+    'Staples',
+    'Other',
+] as const;
 
 export default function ReceivePackageScreen() {
     const { colors } = useTheme();
@@ -35,57 +51,72 @@ export default function ReceivePackageScreen() {
     const navigation = useNavigation();
 
     // Form state
-    const [sender, setSender] = useState<PackageSender>('Drawdown');
+    const [sender, setSender] = useState('Amazon');
     const [senderCustom, setSenderCustom] = useState('');
     const [carrier, setCarrier] = useState('');
     const [numberOfPackages, setNumberOfPackages] = useState('1');
-    const [addressedToType, setAddressedToType] = useState<'staff' | 'custom'>('staff');
-    const [selectedRecipient, setSelectedRecipient] = useState<PackageRecipient | null>(null);
     const [customRecipientName, setCustomRecipientName] = useState('');
 
     // Data
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [allTeams, setAllTeams] = useState<any[]>([]);
+    const [selectedRecipientValue, setSelectedRecipientValue] = useState('');
+    const [customVendors, setCustomVendors] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    const [allUsers, setAllUsers] = useState<Models.User<Models.Preferences>[]>([]);
-    const [allTeams, setAllTeams] = useState<Models.Team<Models.Preferences>[]>([]);
-    const [selectedRecipientValue, setSelectedRecipientValue] = useState('');
+    useEffect(() => {
+        loadData();
+    }, []);
 
-
-    const loadUsersAndTeams = async () => {
+    const loadData = async () => {
         try {
-            // Load users
-            const usersResponse = await users.list();
-            setAllUsers(usersResponse.users);
+            const [users, teams, vendors] = await Promise.all([
+                loadAllUsers(),
+                loadAllTeams(),
+                loadCustomVendors(),
+            ]);
 
-            // Load teams
-            const teamsResponse = await teams.list();
-            setAllTeams(teamsResponse.teams);
+            setAllUsers(users);
+            setAllTeams(teams);
+            setCustomVendors(vendors);
         } catch (error) {
-            console.error('Error loading users/teams:', error);
-            Alert.alert('Error', 'Failed to load staff list');
+            console.error('Error loading data:', error);
+            Alert.alert('Error', 'Failed to load data');
+        } finally {
+            setLoading(false);
         }
     };
 
-    useEffect(() => {
-        loadUsersAndTeams();
-    }, []);
+    const loadCustomVendors = async (): Promise<string[]> => {
+        try {
+            const response = await databases.listDocuments(
+                DATABASE_ID,
+                COLLECTIONS.PACKAGES,
+                [Query.limit(1000), Query.orderDesc('received_date')]
+            );
 
+            const allSenders = response.documents.map((doc: any) => doc.sender);
+            const uniqueCustom = [...new Set(allSenders)]
+                .filter(sender => !COMMON_VENDORS.includes(sender as any))
+                .sort();
+
+            return uniqueCustom;
+        } catch (error) {
+            console.error('Error loading custom vendors:', error);
+            return [];
+        }
+    };
 
     const handleSubmit = async () => {
         // Validation
-        if (sender === 'Custom' && !senderCustom.trim()) {
-            Alert.alert('Validation Error', 'Please enter the custom sender name');
+        if (sender === 'Other' && !senderCustom.trim()) {
+            Alert.alert('Validation Error', 'Please enter the sender name');
             return;
         }
 
-        if (addressedToType === 'staff' && !selectedRecipient) {
+        if (!selectedRecipientValue) {
             Alert.alert('Validation Error', 'Please select a recipient');
-            return;
-        }
-
-        if (addressedToType === 'custom' && !customRecipientName.trim()) {
-            Alert.alert('Validation Error', 'Please enter the recipient name');
             return;
         }
 
@@ -98,37 +129,65 @@ export default function ReceivePackageScreen() {
         setSubmitting(true);
 
         try {
+            const [type, id] = selectedRecipientValue.split(':');
+
+            let addressedTo = '';
+            let addressedToType: 'user' | 'team' | 'custom' | 'unclaimed' = 'user';
+            let addressedToId: string | null = null;
+
+            if (type === 'user') {
+                const selectedUser = allUsers.find(u => u.$id === id);
+                addressedTo = selectedUser?.display_name || selectedUser?.email || 'Unknown';
+                addressedToType = 'user';
+                addressedToId = selectedUser?.user_id || id;
+            } else if (type === 'team') {
+                const selectedTeam = allTeams.find((t: any) => t.$id === id);
+                addressedTo = selectedTeam?.name || 'Unknown Team';
+                addressedToType = 'team';
+                addressedToId = id;
+            } else if (type === 'unclaimed') {
+                addressedTo = 'EAST Initiative / Unclaimed';
+                addressedToType = 'unclaimed';
+                addressedToId = null;
+            } else if (type === 'custom') {
+                if (!customRecipientName.trim()) {
+                    Alert.alert('Error', 'Please enter a custom recipient name');
+                    setSubmitting(false);
+                    return;
+                }
+                addressedTo = customRecipientName.trim();
+                addressedToType = 'custom';
+                addressedToId = null;
+            }
+
             const trackingNumber = generateTrackingNumber();
-            const addressedTo =
-                addressedToType === 'staff'
-                    ? selectedRecipient!.name
-                    : customRecipientName.trim();
+            const finalSender = sender === 'Other' ? senderCustom.trim() : sender;
 
             const packageData = {
                 tracking_number: trackingNumber,
-                sender: sender === 'Custom' ? senderCustom.trim() : sender,
+                sender: finalSender,
                 carrier: carrier || null,
                 number_of_packages: numPackages,
                 received_date: new Date().toISOString(),
                 addressed_to: addressedTo,
                 addressed_to_type: addressedToType,
-                addressed_to_id: addressedToType === 'staff' ? selectedRecipient!.$id : null,
+                addressed_to_id: addressedToId,
                 location: 'Reception',
-                status: 'pending_confirmation',
+                status: addressedToType === 'unclaimed' ? 'pending_claim' : 'pending_confirmation',
                 received_by: user?.name || user?.email || 'Unknown',
                 notification_sent: false,
                 reminder_sent: false,
                 reminder_count: 0,
+                needs_claim: addressedToType === 'unclaimed',
+                current_handler: addressedTo,
             };
 
             await databases.createDocument(
                 DATABASE_ID,
-                'packages',
+                COLLECTIONS.PACKAGES,
                 ID.unique(),
                 packageData
             );
-
-            // TODO: Send notification to recipient
 
             Alert.alert(
                 'Success',
@@ -136,9 +195,7 @@ export default function ReceivePackageScreen() {
                 [
                     {
                         text: 'OK',
-                        onPress: () => {
-                            navigation.goBack();
-                        },
+                        onPress: () => navigation.goBack(),
                     },
                 ]
             );
@@ -157,6 +214,8 @@ export default function ReceivePackageScreen() {
             </View>
         );
     }
+
+    const allVendors = [...COMMON_VENDORS, ...customVendors];
 
     return (
         <KeyboardAvoidingView
@@ -182,16 +241,28 @@ export default function ReceivePackageScreen() {
                     <View style={[styles.pickerContainer, { borderColor: colors.ui.border }]}>
                         <Picker
                             selectedValue={sender}
-                            onValueChange={(value) => setSender(value as PackageSender)}
+                            onValueChange={(value) => setSender(value)}
                             style={{ color: colors.text.primary }}
                         >
-                            {PACKAGE_SENDERS.map((s) => (
-                                <Picker.Item key={s} label={s} value={s} />
+                            {/* Common Vendors */}
+                            <Picker.Item label="─── COMMON VENDORS ───" value="" enabled={false} />
+                            {COMMON_VENDORS.map((vendor) => (
+                                <Picker.Item key={vendor} label={vendor} value={vendor} />
                             ))}
+
+                            {/* Previously Used Custom Vendors */}
+                            {customVendors.length > 0 && (
+                                <>
+                                    <Picker.Item label="─── PREVIOUSLY USED ───" value="" enabled={false} />
+                                    {customVendors.map((vendor) => (
+                                        <Picker.Item key={vendor} label={vendor} value={vendor} />
+                                    ))}
+                                </>
+                            )}
                         </Picker>
                     </View>
 
-                    {sender === 'Custom' && (
+                    {sender === 'Other' && (
                         <TextInput
                             style={[
                                 styles.input,
@@ -201,7 +272,7 @@ export default function ReceivePackageScreen() {
                                     color: colors.text.primary,
                                 },
                             ]}
-                            placeholder="Enter custom sender name"
+                            placeholder="Enter sender name (will be saved for future)"
                             placeholderTextColor={colors.text.secondary}
                             value={senderCustom}
                             onChangeText={setSenderCustom}
@@ -256,84 +327,46 @@ export default function ReceivePackageScreen() {
                         Addressed To *
                     </Text>
 
-                    {/* Toggle: Staff vs Custom */}
-                    <View style={styles.toggleContainer}>
-                        <TouchableOpacity
-                            style={[
-                                styles.toggleButton,
-                                addressedToType === 'staff' && {
-                                    backgroundColor: colors.primary.cyan,
-                                },
-                                {
-                                    borderColor: colors.ui.border,
-                                },
-                            ]}
-                            onPress={() => setAddressedToType('staff')}
+                    <View style={[styles.pickerContainer, { borderColor: colors.ui.border }]}>
+                        <Picker
+                            selectedValue={selectedRecipientValue}
+                            onValueChange={setSelectedRecipientValue}
+                            style={{ color: colors.text.primary }}
                         >
-                            <Text
-                                style={[
-                                    styles.toggleText,
-                                    {
-                                        color:
-                                            addressedToType === 'staff'
-                                                ? '#fff'
-                                                : colors.text.primary,
-                                    },
-                                ]}
-                            >
-                                Select Staff
-                            </Text>
-                        </TouchableOpacity>
+                            <Picker.Item label="-- Select Recipient --" value="" />
 
-                        <TouchableOpacity
-                            style={[
-                                styles.toggleButton,
-                                addressedToType === 'custom' && {
-                                    backgroundColor: colors.primary.cyan,
-                                },
-                                {
-                                    borderColor: colors.ui.border,
-                                },
-                            ]}
-                            onPress={() => setAddressedToType('custom')}
-                        >
-                            <Text
-                                style={[
-                                    styles.toggleText,
-                                    {
-                                        color:
-                                            addressedToType === 'custom'
-                                                ? '#fff'
-                                                : colors.text.primary,
-                                    },
-                                ]}
-                            >
-                                Custom Name
-                            </Text>
-                        </TouchableOpacity>
+                            {/* Staff Members */}
+                            <Picker.Item label="─── STAFF MEMBERS ───" value="" enabled={false} />
+                            {allUsers.map((userDoc: any) => (
+                                <Picker.Item
+                                    key={userDoc.$id}
+                                    label={userDoc.display_name || userDoc.email}
+                                    value={`user:${userDoc.$id}`}
+                                />
+                            ))}
+
+                            {/* Teams */}
+                            {allTeams.length > 0 && (
+                                <>
+                                    <Picker.Item label="─── TEAMS/DEPARTMENTS ───" value="" enabled={false} />
+                                    {allTeams.map((team: any) => (
+                                        <Picker.Item
+                                            key={team.$id}
+                                            label={`${team.name} (Team)`}
+                                            value={`team:${team.$id}`}
+                                        />
+                                    ))}
+                                </>
+                            )}
+
+                            {/* Special */}
+                            <Picker.Item label="─── SPECIAL ───" value="" enabled={false} />
+                            <Picker.Item label="🏢 EAST Initiative / Unclaimed" value="unclaimed:" />
+                            <Picker.Item label="✏️ Custom Name..." value="custom:" />
+                        </Picker>
                     </View>
 
-                    {addressedToType === 'staff' ? (
-                        <View style={[styles.pickerContainer, { borderColor: colors.ui.border }]}>
-                            <Picker
-                                selectedValue={selectedRecipient?.$id}
-                                onValueChange={(value) => {
-                                    const recipient = recipients.find((r) => r.$id === value);
-                                    setSelectedRecipient(recipient || null);
-                                }}
-                                style={{ color: colors.text.primary }}
-                            >
-                                <Picker.Item label="Select recipient..." value="" />
-                                {recipients.map((r) => (
-                                    <Picker.Item
-                                        key={r.$id}
-                                        label={`${r.name} ${r.department ? `(${r.department})` : ''}`}
-                                        value={r.$id}
-                                    />
-                                ))}
-                            </Picker>
-                        </View>
-                    ) : (
+                    {selectedRecipientValue === 'custom:' && (
                         <TextInput
                             style={[
                                 styles.input,
@@ -341,6 +374,7 @@ export default function ReceivePackageScreen() {
                                     backgroundColor: colors.background.secondary,
                                     borderColor: colors.ui.border,
                                     color: colors.text.primary,
+                                    marginTop: Spacing.sm,
                                 },
                             ]}
                             placeholder="Enter recipient name"
@@ -415,22 +449,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: BorderRadius.md,
         overflow: 'hidden',
-    },
-    toggleContainer: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-        marginBottom: Spacing.md,
-    },
-    toggleButton: {
-        flex: 1,
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-        alignItems: 'center',
-    },
-    toggleText: {
-        fontSize: Typography.sizes.md,
-        fontWeight: Typography.weights.semibold,
     },
     submitButton: {
         margin: Spacing.lg,

@@ -155,7 +155,7 @@ export default function OfficeSuppliesHomeScreen() {
                 </Text>
                 <Text style={[styles.infoText, { color: colors.text.secondary }]}>
                     • Set reorder points for each item{'\n'}
-                    • Track who takes supplies{'\n'}
+                    • Track supplies over time{'\n'}
                     • Monitor shrinkage and waste{'\n'}
                     • Generate reorder lists automatically
                 </Text>

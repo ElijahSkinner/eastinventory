@@ -1,35 +1,54 @@
 // src/lib/packageTracking.ts
-import { Models } from 'appwrite';
+import { Models, Query } from 'appwrite';
+import { account, teams, databases, DATABASE_ID, COLLECTIONS } from './appwrite';
 
 export interface Package extends Models.Document {
-    forwarded_from?: string; // Previous recipient
-    forwarding_chain?: string[]; // Array of previous recipients
-    current_handler: string; // Who has it now
-    final_recipient?: string; // Who it's ultimately for
+    forwarded_from?: string;
+    forwarding_chain?: string[];
+    current_handler: string;
+    final_recipient?: string;
     tracking_number: string;
-    sender: 'Drawdown' | 'Admin' | 'Custom';
-    sender_custom?: string; // If sender is 'Custom'
+    sender: string;
+    sender_custom?: string;
     carrier?: string;
     number_of_packages: number;
-    received_date: string; // ISO datetime
+    received_date: string;
     location: 'Reception' | 'Receiving Office' | 'With Addressee';
-    status: 'pending_confirmation' | 'confirmed' | 'completed';
-    received_by: string; // Name of front desk person
+    status: 'pending_confirmation' | 'confirmed' | 'completed' | 'pending_claim';
+    received_by: string;
     contents_confirmed_by?: string;
     contents_confirmed_date?: string;
     completion_notes?: string;
     notification_sent: boolean;
     reminder_sent: boolean;
     reminder_count: number;
-    addressed_to: string; // Display name
-    addressed_to_type: 'user' | 'team' | 'custom' | 'unclaimed'; // CHANGED
-    addressed_to_id?: string; // Now Appwrite User ID or Team ID
-
+    addressed_to: string;
+    addressed_to_type: 'user' | 'team' | 'custom' | 'unclaimed';
+    addressed_to_id?: string;
+    needs_claim?: boolean;
+    claimed_by?: string;
+    claimed_date?: string;
 }
+
+export interface PackageNotification extends Models.Document {
+    package_id: string;
+    recipient_id: string;
+    notification_type: 'initial' | 'reminder' | 'completed';
+    sent_date: string;
+    read: boolean;
+    read_date?: string;
+}
+
+// Helper functions to load users and teams
 export async function loadAllUsers() {
     try {
-        const response = await users.list();
-        return response.users;
+        // Get all user documents from user_settings collection
+        const response = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.USER_SETTINGS,
+            [Query.limit(500)]
+        );
+        return response.documents;
     } catch (error) {
         console.error('Error loading users:', error);
         return [];
@@ -46,34 +65,22 @@ export async function loadAllTeams() {
     }
 }
 
-export async function getUserTeams(userId: string) {
+export async function getUserTeams() {
     try {
         const response = await teams.list();
-        // Filter to teams where user is a member
-        // Note: You'll need to check memberships
         return response.teams;
     } catch (error) {
         console.error('Error getting user teams:', error);
         return [];
     }
 }
-export interface PackageNotification extends Models.Document {
-    package_id: string;
-    recipient_id: string;
-    notification_type: 'initial' | 'reminder' | 'completed';
-    sent_date: string;
-    read: boolean;
-    read_date?: string;
-}
 
 // Helper types
-export type PackageSender = 'Drawdown' | 'Admin' | 'Custom';
 export type PackageLocation = 'Reception' | 'Receiving Office' | 'With Addressee';
-export type PackageStatus = 'pending_confirmation' | 'confirmed' | 'completed';
+export type PackageStatus = 'pending_confirmation' | 'confirmed' | 'completed' | 'pending_claim';
 export type NotificationType = 'initial' | 'reminder' | 'completed';
 
 // Constants
-export const PACKAGE_SENDERS: PackageSender[] = ['Drawdown', 'Admin', 'Custom'];
 export const PACKAGE_LOCATIONS: PackageLocation[] = [
     'Reception',
     'Receiving Office',
@@ -98,6 +105,8 @@ export function getStatusColor(status: PackageStatus): string {
             return '#0093B2'; // Cyan
         case 'completed':
             return '#27ae60'; // Green
+        case 'pending_claim':
+            return '#7E5475'; // Purple
         default:
             return '#53565A'; // Gray
     }
@@ -111,6 +120,8 @@ export function getStatusIcon(status: PackageStatus): string {
             return '✅';
         case 'completed':
             return '📦';
+        case 'pending_claim':
+            return '❓';
         default:
             return '📋';
     }
@@ -124,6 +135,8 @@ export function getStatusLabel(status: PackageStatus): string {
             return 'Confirmed';
         case 'completed':
             return 'Completed';
+        case 'pending_claim':
+            return 'Needs Claim';
         default:
             return 'Unknown';
     }
@@ -173,5 +186,5 @@ export function getDaysSinceReceived(receivedDate: string): number {
 export function needsReminder(pkg: Package): boolean {
     if (pkg.status === 'completed') return false;
     const daysSince = getDaysSinceReceived(pkg.received_date);
-    return daysSince >= 1 && pkg.reminder_count < 3; // Send up to 3 reminders
+    return daysSince >= 1 && pkg.reminder_count < 3;
 }

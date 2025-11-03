@@ -14,9 +14,9 @@ import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { databases, DATABASE_ID, ID } from '../../lib/appwrite';
+import {databases, DATABASE_ID, ID, COLLECTIONS} from '../../lib/appwrite';
 import { Query } from 'appwrite';
-import { Package, PackageRecipient, formatPackageDate } from '../../lib/packageTracking';
+import {Package, formatPackageDate, loadAllUsers} from '../../lib/packageTracking';
 import { Typography, Spacing, BorderRadius, Shadows } from '../../theme';
 
 export default function ForwardPackageScreen() {
@@ -26,33 +26,28 @@ export default function ForwardPackageScreen() {
     const route = useRoute();
     const packageToForward = (route.params as any)?.package as Package;
 
-    const [recipients, setRecipients] = useState<PackageRecipient[]>([]);
-    const [selectedRecipient, setSelectedRecipient] = useState<PackageRecipient | null>(null);
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
     const [customRecipientName, setCustomRecipientName] = useState('');
     const [forwardingReason, setForwardingReason] = useState('');
     const [recipientType, setRecipientType] = useState<'staff' | 'custom'>('staff');
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-
+    const recipients = allUsers;
     useEffect(() => {
-        loadRecipients();
+        loadUsers();
     }, []);
 
-    const loadRecipients = async () => {
+    const loadUsers = async () => {
         try {
-            const response = await databases.listDocuments(
-                DATABASE_ID,
-                'package_recipients',
-                [Query.equal('active', true), Query.orderAsc('name')]
-            );
-            setRecipients(response.documents as unknown as PackageRecipient[]);
+            const users = await loadAllUsers();
+            setAllUsers(users);
         } catch (error) {
-            console.error('Error loading recipients:', error);
+            console.error('Error loading users:', error);
         } finally {
             setLoading(false);
         }
     };
-
     const handleForward = async () => {
         // Validation
         if (recipientType === 'staff' && !selectedRecipient) {

@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { databases, DATABASE_ID, ID } from '../../lib/appwrite';
+import { databases, DATABASE_ID, ID, teams, COLLECTIONS } from '../../lib/appwrite'; // Add teams import
 import { Query } from 'appwrite';
 import {
     Package,
@@ -28,13 +28,13 @@ import {
 import {Typography, Spacing, BorderRadius, Shadows, Colors} from '../../theme';
 import { PackageTrackingStackParamList } from '../../navigation/AppNavigator';
 
+// FIX: Add the type definition
+type MyPackagesNavigationProp = NativeStackNavigationProp<PackageTrackingStackParamList, 'MyPackages'>;
 
 export default function MyPackagesScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
-    const navigation = useNavigation<MyPackagesNavigationProp>();
-
-
+    const navigation = useNavigation();
     const [packages, setPackages] = useState<Package[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -49,31 +49,59 @@ export default function MyPackagesScreen() {
 
     const loadMyPackages = async () => {
         try {
-            // Load packages addressed to the current user
-            // This assumes we can match by name or email
-            const response = await databases.listDocuments(
+            if (!user) return;
+
+            // Get packages directly addressed to user
+            const userPackagesResponse = await databases.listDocuments(
                 DATABASE_ID,
                 'packages',
                 [
+                    Query.equal('addressed_to_type', 'user'),
+                    Query.equal('addressed_to_id', user.$id),
                     Query.orderDesc('received_date'),
                     Query.limit(100),
                 ]
             );
 
-            // Filter to only packages for this user
-            const userPackages = (response.documents as unknown as Package[]).filter((pkg) => {
-                // Match by name or email
-                const userName = user?.name?.toLowerCase();
-                const userEmail = user?.email?.toLowerCase();
-                const addressedTo = pkg.addressed_to.toLowerCase();
+            let allPackages = [...(userPackagesResponse.documents as unknown as Package[])];
 
-                return (
-                    addressedTo.includes(userName || '') ||
-                    addressedTo.includes(userEmail || '')
-                );
-            });
+            // Also get packages for teams user belongs to
+            try {
+                const userTeamsResponse = await teams.list();
+                // Note: You may need to filter teams where the user is actually a member
+                // This is a simplified version - you might need to check memberships
+                const userTeamIds = userTeamsResponse.teams.map(team => team.$id);
 
-            setPackages(userPackages);
+                if (userTeamIds.length > 0) {
+                    const teamPackagesResponse = await databases.listDocuments(
+                        DATABASE_ID,
+                        'packages',
+                        [
+                            Query.equal('addressed_to_type', 'team'),
+                            // Note: Appwrite may not support Query.equal with array
+                            // You might need to make multiple queries or handle differently
+                            Query.orderDesc('received_date'),
+                            Query.limit(100),
+                        ]
+                    );
+
+                    // Filter to only teams the user belongs to
+                    const teamPackages = (teamPackagesResponse.documents as unknown as Package[])
+                        .filter(pkg => pkg.addressed_to_id && userTeamIds.includes(pkg.addressed_to_id));
+
+                    allPackages = [...allPackages, ...teamPackages];
+                }
+            } catch (teamError) {
+                console.error('Error loading team packages:', teamError);
+                // Continue with just user packages if team loading fails
+            }
+
+            // Sort by received date
+            allPackages.sort((a, b) =>
+                new Date(b.received_date).getTime() - new Date(a.received_date).getTime()
+            );
+
+            setPackages(allPackages);
         } catch (error) {
             console.error('Error loading packages:', error);
         } finally {
@@ -95,7 +123,6 @@ export default function MyPackagesScreen() {
     const submitConfirmation = async () => {
         if (!selectedPackage) return;
 
-        // Validate - Ask for confirmation twice
         Alert.alert(
             'Confirm Contents',
             'Are the contents correct?',
@@ -107,7 +134,6 @@ export default function MyPackagesScreen() {
                 {
                     text: 'Yes',
                     onPress: () => {
-                        // Second confirmation
                         Alert.alert(
                             'Final Confirmation',
                             'Did you check all packages? This action cannot be undone.',
@@ -129,9 +155,11 @@ export default function MyPackagesScreen() {
             ]
         );
     };
+
     const handleForward = (pkg: Package) => {
-        navigation.navigate('ForwardPackage' as never, { package: pkg } as never);
+        (navigation as any).navigate('ForwardPackage', { package: pkg });
     };
+
     const processConfirmation = async () => {
         if (!selectedPackage) return;
 
@@ -272,30 +300,36 @@ export default function MyPackagesScreen() {
                     </View>
                 )}
 
-                {/* Action Button */}
+                {/* Action Buttons */}
                 {item.status === 'pending_confirmation' && (
-                    <TouchableOpacity
-                        style={[styles.confirmButton, { backgroundColor: colors.primary.cyan }]}
-                        onPress={() => handleConfirmPackage(item)}
-                    >
-                        <Text style={styles.confirmButtonText}>✓ Confirm Contents</Text>
+                    <>
+                        <TouchableOpacity
+                            style={[styles.confirmButton, { backgroundColor: colors.primary.cyan }]}
+                            onPress={() => handleConfirmPackage(item)}
+                        >
+                            <Text style={styles.confirmButtonText}>✓ Confirm Contents</Text>
+                        </TouchableOpacity>
 
-                        {item.forwarding_chain && (
+                        {item.forwarding_chain && item.forwarding_chain.length > 0 && (
                             <View style={styles.forwardingHistory}>
-                                <Text>Previously handled by:</Text>
+                                <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>
+                                    Previously handled by:
+                                </Text>
                                 {item.forwarding_chain.map((person, i) => (
-                                    <Text key={i}>→ {person}</Text>
+                                    <Text key={i} style={[styles.detailValue, { color: colors.text.primary }]}>
+                                        → {person}
+                                    </Text>
                                 ))}
                             </View>
                         )}
 
                         <TouchableOpacity
-                            style={styles.forwardButton}
+                            style={[styles.forwardButton, { backgroundColor: colors.secondary.orange }]}
                             onPress={() => handleForward(item)}
                         >
-                            <Text>📤 Forward to Someone Else</Text>
+                            <Text style={styles.confirmButtonText}>📤 Forward to Someone Else</Text>
                         </TouchableOpacity>
-                    </TouchableOpacity>
+                    </>
                 )}
 
                 {item.status === 'completed' && item.completion_notes && (
@@ -427,7 +461,7 @@ export default function MyPackagesScreen() {
                             No packages found
                         </Text>
                         <Text style={[styles.emptySubtext, { color: colors.text.secondary }]}>
-                            You don&apos;t have any packages yet
+                            You don&#39;t have any packages yet
                         </Text>
                     </View>
                 }
@@ -436,6 +470,7 @@ export default function MyPackagesScreen() {
     );
 }
 
+// ... rest of styles remain the same
 const styles = StyleSheet.create({
     container: {
         flex: 1,

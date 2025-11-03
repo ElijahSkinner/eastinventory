@@ -1,6 +1,6 @@
-import { Client, Databases, Account, Teams, Users, Models, Query, ID } from 'appwrite';
+import { Client, Databases, Account, Teams, Models, Query, ID } from 'appwrite';
 import { Platform } from 'react-native';
-export type { Package, PackageRecipient, PackageNotification } from './packageTracking';
+export type { Package, PackageNotification } from './packageTracking';
 
 const client = new Client();
 
@@ -18,7 +18,6 @@ client
 export const databases = new Databases(client);
 export const account = new Account(client);
 export const teams = new Teams(client);  // ADD THIS
-export const users = new Users(client);
 export const DATABASE_ID = 'inventory_db';
 
 export const COLLECTIONS = {
@@ -36,7 +35,6 @@ export const COLLECTIONS = {
     OFFICE_SUPPLY_ITEMS: 'office_supply_items',
     OFFICE_SUPPLY_TRANSACTIONS: 'office_supply_transactions',
     PACKAGES: 'packages',
-    PACKAGE_RECIPIENTS: 'package_recipients',
     PACKAGE_NOTIFICATIONS: 'package_notifications',
 } as const;
 

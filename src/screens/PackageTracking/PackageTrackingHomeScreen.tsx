@@ -91,9 +91,6 @@ export default function PackageTrackingHomeScreen() {
         navigation.navigate('AllPackages' as never);
     };
 
-    const navigateToManageRecipients = () => {
-        navigation.navigate('ManageRecipients' as never);
-    };
 
     if (loading) {
         return (
@@ -246,22 +243,6 @@ export default function PackageTrackingHomeScreen() {
                         </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[
-                            styles.actionButton,
-                            {
-                                backgroundColor: colors.background.secondary,
-                                borderWidth: 1,
-                                borderColor: colors.ui.border,
-                            },
-                        ]}
-                        onPress={navigateToManageRecipients}
-                    >
-                        <Text style={styles.actionIcon}>👥</Text>
-                        <Text style={[styles.actionText, { color: colors.text.primary }]}>
-                            Manage Recipients
-                        </Text>
-                    </TouchableOpacity>
                 </View>
 
                 {/* Recent Packages */}

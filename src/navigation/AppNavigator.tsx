@@ -33,7 +33,6 @@ import PackageTrackingHomeScreen from '../screens/PackageTracking/PackageTrackin
 import ReceivePackageScreen from '../screens/PackageTracking/ReceivePackageScreen';
 import MyPackagesScreen from '../screens/PackageTracking/MyPackagesScreen';
 import AllPackagesScreen from '../screens/PackageTracking/AllPackagesScreen';
-import ManageRecipientsScreen from '../screens/PackageTracking/ManageRecipientsScreen';
 import ForwardPackageScreen from '../screens/PackageTracking/ForwardPackageScreen';
 import UnclaimedPackagesScreen from '../screens/PackageTracking/UnclaimedPackagesScreen';
 
@@ -73,7 +72,6 @@ export type PackageTrackingStackParamList = {
     ReceivePackage: undefined;
     MyPackages: undefined;
     AllPackages: undefined;
-    ManageRecipients: undefined;
     ForwardPackage: { package: Package };
     UnclaimedPackages: undefined;
 };
@@ -259,11 +257,6 @@ function PackageTrackingNavigator() {
                 name="AllPackages"
                 component={AllPackagesScreen}
                 options={{ title: 'All Packages' }}
-            />
-            <PackageTrackingStack.Screen
-                name="ManageRecipients"
-                component={ManageRecipientsScreen}
-                options={{ title: 'Manage Recipients' }}
             />
             <PackageTrackingStack.Screen
                 name="ForwardPackage"
@@ -488,16 +481,6 @@ function CustomDrawerContent(props: any) {
                                         updateUserSettings({ last_section: 'packages' }).catch(console.error);
                                     }}
                                 />
-                                {isAdmin && (
-                                    <DrawerItem
-                                        label="Manage Recipients"
-                                        icon="👥"
-                                        onPress={() => {
-                                            props.navigation.navigate('PackageTrackingStack', { screen: 'ManageRecipients' });
-                                            updateUserSettings({ last_section: 'packages' }).catch(console.error);
-                                        }}
-                                    />
-                                )}
                             </>
                         )}
                     </View>
