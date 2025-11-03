@@ -19,13 +19,15 @@ import { useAuth } from '../../context/AuthContext';
 import { databases, DATABASE_ID, ID } from '../../lib/appwrite';
 import { Query } from 'appwrite';
 import {
-    PackageRecipient,
     PackageSender,
     PACKAGE_SENDERS,
     CARRIERS,
     generateTrackingNumber,
 } from '../../lib/packageTracking';
 import { Typography, Spacing, BorderRadius, Shadows } from '../../theme';
+import { users, teams } from '../../lib/appwrite';
+import { Models } from 'appwrite';
+
 
 export default function ReceivePackageScreen() {
     const { colors } = useTheme();
@@ -42,29 +44,33 @@ export default function ReceivePackageScreen() {
     const [customRecipientName, setCustomRecipientName] = useState('');
 
     // Data
-    const [recipients, setRecipients] = useState<PackageRecipient[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        loadRecipients();
-    }, []);
+    const [allUsers, setAllUsers] = useState<Models.User<Models.Preferences>[]>([]);
+    const [allTeams, setAllTeams] = useState<Models.Team<Models.Preferences>[]>([]);
+    const [selectedRecipientValue, setSelectedRecipientValue] = useState('');
 
-    const loadRecipients = async () => {
+
+    const loadUsersAndTeams = async () => {
         try {
-            const response = await databases.listDocuments(
-                DATABASE_ID,
-                'package_recipients',
-                [Query.equal('active', true), Query.orderAsc('name')]
-            );
-            setRecipients(response.documents as unknown as PackageRecipient[]);
+            // Load users
+            const usersResponse = await users.list();
+            setAllUsers(usersResponse.users);
+
+            // Load teams
+            const teamsResponse = await teams.list();
+            setAllTeams(teamsResponse.teams);
         } catch (error) {
-            console.error('Error loading recipients:', error);
-            Alert.alert('Error', 'Failed to load recipient list');
-        } finally {
-            setLoading(false);
+            console.error('Error loading users/teams:', error);
+            Alert.alert('Error', 'Failed to load staff list');
         }
     };
+
+    useEffect(() => {
+        loadUsersAndTeams();
+    }, []);
+
 
     const handleSubmit = async () => {
         // Validation

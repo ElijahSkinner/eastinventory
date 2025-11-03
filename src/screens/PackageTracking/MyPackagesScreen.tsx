@@ -11,6 +11,8 @@ import {
     Alert,
     TextInput,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { databases, DATABASE_ID, ID } from '../../lib/appwrite';
@@ -23,11 +25,15 @@ import {
     getDaysSinceReceived,
     formatPackageDate,
 } from '../../lib/packageTracking';
-import { Typography, Spacing, BorderRadius, Shadows } from '../../theme';
+import {Typography, Spacing, BorderRadius, Shadows, Colors} from '../../theme';
+import { PackageTrackingStackParamList } from '../../navigation/AppNavigator';
+
 
 export default function MyPackagesScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
+    const navigation = useNavigation<MyPackagesNavigationProp>();
+
 
     const [packages, setPackages] = useState<Package[]>([]);
     const [loading, setLoading] = useState(true);
@@ -123,7 +129,9 @@ export default function MyPackagesScreen() {
             ]
         );
     };
-
+    const handleForward = (pkg: Package) => {
+        navigation.navigate('ForwardPackage' as never, { package: pkg } as never);
+    };
     const processConfirmation = async () => {
         if (!selectedPackage) return;
 
@@ -419,7 +427,7 @@ export default function MyPackagesScreen() {
                             No packages found
                         </Text>
                         <Text style={[styles.emptySubtext, { color: colors.text.secondary }]}>
-                            You don't have any packages yet
+                            You don&apos;t have any packages yet
                         </Text>
                     </View>
                 }
@@ -546,6 +554,23 @@ const styles = StyleSheet.create({
         fontSize: Typography.sizes.md,
         textAlign: 'center',
     },
+
+
+    forwardingHistory: {
+        marginTop: Spacing.md,
+        padding: Spacing.sm,
+        backgroundColor: 'rgba(0, 147, 178, 0.1)',
+        borderRadius: BorderRadius.sm,
+    },
+    forwardButton: {
+        marginTop: Spacing.md,
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        alignItems: 'center',
+        backgroundColor: Colors.secondary.orange,
+        ...Shadows.sm,
+    },
+
     // Modal styles
     modalOverlay: {
         position: 'absolute',

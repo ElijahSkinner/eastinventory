@@ -5,7 +5,7 @@ import { createDrawerNavigator, DrawerNavigationProp } from '@react-navigation/d
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Colors } from '../theme';
 import {Image, View, Text, StyleSheet, TouchableOpacity, ScrollView} from 'react-native';
-import { OfficeSupplyItem } from '../lib/appwrite';
+import { OfficeSupplyItem, Package } from '../lib/appwrite';
 import { useAuth } from '../context/AuthContext';
 import { useRole } from '../hooks/useRole';
 
@@ -28,6 +28,15 @@ import InventoryCountScreen from '../screens/OfficeSupplies/InventoryCountScreen
 import ReorderAlertsScreen from '../screens/OfficeSupplies/ReorderAlertsScreen';
 import UsageReportsScreen from '../screens/OfficeSupplies/usageReportsScreen';
 
+// Package Tracking screens
+import PackageTrackingHomeScreen from '../screens/PackageTracking/PackageTrackingHomeScreen';
+import ReceivePackageScreen from '../screens/PackageTracking/ReceivePackageScreen';
+import MyPackagesScreen from '../screens/PackageTracking/MyPackagesScreen';
+import AllPackagesScreen from '../screens/PackageTracking/AllPackagesScreen';
+import ManageRecipientsScreen from '../screens/PackageTracking/ManageRecipientsScreen';
+import ForwardPackageScreen from '../screens/PackageTracking/ForwardPackageScreen';
+import UnclaimedPackagesScreen from '../screens/PackageTracking/UnclaimedPackagesScreen';
+
 export type RootStackParamList = {
     Main: undefined;
     CreatePurchaseOrder: undefined;
@@ -38,6 +47,7 @@ export type DrawerParamList = {
     Dashboard: undefined;
     ProcurementStack: undefined;
     OfficeInventoryStack: undefined;
+    PackageTrackingStack: undefined;
     Settings: undefined;
 };
 
@@ -58,10 +68,21 @@ export type OfficeInventoryStackParamList = {
     AddEditSupply: { item?: OfficeSupplyItem } | undefined;
 };
 
+export type PackageTrackingStackParamList = {
+    PackageTrackingHome: undefined;
+    ReceivePackage: undefined;
+    MyPackages: undefined;
+    AllPackages: undefined;
+    ManageRecipients: undefined;
+    ForwardPackage: { package: Package };
+    UnclaimedPackages: undefined;
+};
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const ProcurementStack = createNativeStackNavigator<ProcurementStackParamList>();
 const OfficeInventoryStack = createNativeStackNavigator<OfficeInventoryStackParamList>();
+const PackageTrackingStack = createNativeStackNavigator<PackageTrackingStackParamList>();
 
 // Procurement section stack navigator
 function ProcurementNavigator() {
@@ -188,26 +209,88 @@ function OfficeInventoryNavigator() {
     );
 }
 
+// Package Tracking section stack navigator
+function PackageTrackingNavigator() {
+    return (
+        <PackageTrackingStack.Navigator
+            screenOptions={({ navigation }) => ({
+                headerStyle: {
+                    backgroundColor: Colors.secondary.purple
+                },
+                headerTintColor: Colors.text.white,
+                headerTitleStyle: {
+                    fontWeight: 'bold'
+                },
+                headerTitle: () => (
+                    <Image
+                        source={require('../../assets/logos/EAST_Logo_White_Horz.png')}
+                        style={{ width: 140, height: 35 }}
+                        resizeMode="contain"
+                    />
+                ),
+                headerLeft: () => (
+                    <TouchableOpacity
+                        onPress={() => {
+                            (navigation.getParent() as DrawerNavigationProp<DrawerParamList>)?.openDrawer();
+                        }}
+                        style={{ marginLeft: 15 }}
+                    >
+                        <Text style={{ color: Colors.text.white, fontSize: 24 }}>☰</Text>
+                    </TouchableOpacity>
+                ),
+            })}
+        >
+            <PackageTrackingStack.Screen
+                name="PackageTrackingHome"
+                component={PackageTrackingHomeScreen}
+                options={{ title: 'Package Tracking' }}
+            />
+            <PackageTrackingStack.Screen
+                name="ReceivePackage"
+                component={ReceivePackageScreen}
+                options={{ title: 'Receive Package' }}
+            />
+            <PackageTrackingStack.Screen
+                name="MyPackages"
+                component={MyPackagesScreen}
+                options={{ title: 'My Packages' }}
+            />
+            <PackageTrackingStack.Screen
+                name="AllPackages"
+                component={AllPackagesScreen}
+                options={{ title: 'All Packages' }}
+            />
+            <PackageTrackingStack.Screen
+                name="ManageRecipients"
+                component={ManageRecipientsScreen}
+                options={{ title: 'Manage Recipients' }}
+            />
+            <PackageTrackingStack.Screen
+                name="ForwardPackage"
+                component={ForwardPackageScreen}
+                options={{ title: 'Forward Package' }}
+            />
+            <PackageTrackingStack.Screen
+                name="UnclaimedPackages"
+                component={UnclaimedPackagesScreen}
+                options={{ title: 'Unclaimed Packages' }}
+            />
+        </PackageTrackingStack.Navigator>
+    );
+}
+
 // Custom drawer content with permission-based navigation
 function CustomDrawerContent(props: any) {
     const { updateUserSettings } = useAuth();
     const { isAdmin, labels } = useRole();
     const [procurementExpanded, setProcurementExpanded] = React.useState(true);
     const [inventoryExpanded, setInventoryExpanded] = React.useState(true);
+    const [packageExpanded, setPackageExpanded] = React.useState(true);
 
     // Check permissions
     const hasProcurementAccess = isAdmin || labels.includes('procurement');
     const hasInventoryAccess = isAdmin || labels.includes('inventory');
-
-    // Save last section when navigating
-    const handleNavigation = async (route: string, section: 'procurement' | 'inventory') => {
-        props.navigation.navigate(route);
-        try {
-            await updateUserSettings({ last_section: section });
-        } catch (error) {
-            console.error('Failed to save last section:', error);
-        }
-    };
+    const hasPackageAccess = isAdmin || labels.includes('packages');
 
     return (
         <View style={styles.drawerContainer}>
@@ -352,12 +435,80 @@ function CustomDrawerContent(props: any) {
                     </View>
                 )}
 
+                {/* Package Tracking Section - Only show if user has access */}
+                {hasPackageAccess && (
+                    <View style={styles.section}>
+                        <TouchableOpacity
+                            style={styles.sectionHeader}
+                            onPress={() => setPackageExpanded(!packageExpanded)}
+                        >
+                            <Text style={styles.sectionTitle}>PACKAGE TRACKING</Text>
+                            <Text style={styles.expandIcon}>{packageExpanded ? '−' : '+'}</Text>
+                        </TouchableOpacity>
+
+                        {packageExpanded && (
+                            <>
+                                <DrawerItem
+                                    label="Dashboard"
+                                    icon="📦"
+                                    onPress={() => {
+                                        props.navigation.navigate('PackageTrackingStack', { screen: 'PackageTrackingHome' });
+                                        updateUserSettings({ last_section: 'packages' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Receive Package"
+                                    icon="📥"
+                                    onPress={() => {
+                                        props.navigation.navigate('PackageTrackingStack', { screen: 'ReceivePackage' });
+                                        updateUserSettings({ last_section: 'packages' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="My Packages"
+                                    icon="📮"
+                                    onPress={() => {
+                                        props.navigation.navigate('PackageTrackingStack', { screen: 'MyPackages' });
+                                        updateUserSettings({ last_section: 'packages' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="All Packages"
+                                    icon="📋"
+                                    onPress={() => {
+                                        props.navigation.navigate('PackageTrackingStack', { screen: 'AllPackages' });
+                                        updateUserSettings({ last_section: 'packages' }).catch(console.error);
+                                    }}
+                                />
+                                <DrawerItem
+                                    label="Unclaimed"
+                                    icon="❓"
+                                    onPress={() => {
+                                        props.navigation.navigate('PackageTrackingStack', { screen: 'UnclaimedPackages' });
+                                        updateUserSettings({ last_section: 'packages' }).catch(console.error);
+                                    }}
+                                />
+                                {isAdmin && (
+                                    <DrawerItem
+                                        label="Manage Recipients"
+                                        icon="👥"
+                                        onPress={() => {
+                                            props.navigation.navigate('PackageTrackingStack', { screen: 'ManageRecipients' });
+                                            updateUserSettings({ last_section: 'packages' }).catch(console.error);
+                                        }}
+                                    />
+                                )}
+                            </>
+                        )}
+                    </View>
+                )}
+
                 {/* Settings */}
                 <DrawerItem
                     label="Settings"
                     icon="⚙️"
                     onPress={() => props.navigation.navigate('Settings')}
-                    active={props.state.index === (hasInventoryAccess && hasProcurementAccess ? 3 : 2)}
+                    active={props.state.routes[props.state.index]?.name === 'Settings'}
                 />
             </ScrollView>
 
@@ -402,22 +553,27 @@ function MainDrawer() {
         const lastSection = userSettings?.last_section;
         const hasProcurementAccess = isAdmin || labels.includes('procurement');
         const hasInventoryAccess = isAdmin || labels.includes('inventory');
+        const hasPackageAccess = isAdmin || labels.includes('packages');
 
         // If user has a saved preference and has access to that section, use it
         if (lastSection === 'procurement' && hasProcurementAccess) {
-            return 'Dashboard'; // HomeScreen - Procurement Dashboard
+            return 'Dashboard';
         } else if (lastSection === 'inventory' && hasInventoryAccess) {
-            return 'OfficeInventoryStack'; // Opens to OfficeSuppliesHome
+            return 'OfficeInventoryStack';
+        } else if (lastSection === 'packages' && hasPackageAccess) {
+            return 'PackageTrackingStack';
         }
 
         // If no saved preference, default based on what they have access to
         if (hasProcurementAccess) {
-            return 'Dashboard'; // Default to Procurement Dashboard
+            return 'Dashboard';
         } else if (hasInventoryAccess) {
-            return 'OfficeInventoryStack'; // Default to Office Inventory Dashboard
+            return 'OfficeInventoryStack';
+        } else if (hasPackageAccess) {
+            return 'PackageTrackingStack';
         }
 
-        // Fallback (shouldn't reach here if permissions are set correctly)
+        // Fallback
         return 'Dashboard';
     };
 
@@ -459,6 +615,11 @@ function MainDrawer() {
                 name="OfficeInventoryStack"
                 component={OfficeInventoryNavigator}
                 options={{ headerShown: false, title: 'Office Inventory' }}
+            />
+            <Drawer.Screen
+                name="PackageTrackingStack"
+                component={PackageTrackingNavigator}
+                options={{ headerShown: false, title: 'Package Tracking' }}
             />
             <Drawer.Screen
                 name="Settings"

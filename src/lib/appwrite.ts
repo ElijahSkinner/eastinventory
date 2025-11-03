@@ -1,5 +1,6 @@
-import { Client, Databases, Account, Models, Query, ID } from 'appwrite';
+import { Client, Databases, Account, Teams, Users, Models, Query, ID } from 'appwrite';
 import { Platform } from 'react-native';
+export type { Package, PackageRecipient, PackageNotification } from './packageTracking';
 
 const client = new Client();
 
@@ -16,6 +17,8 @@ client
 
 export const databases = new Databases(client);
 export const account = new Account(client);
+export const teams = new Teams(client);  // ADD THIS
+export const users = new Users(client);
 export const DATABASE_ID = 'inventory_db';
 
 export const COLLECTIONS = {
@@ -32,6 +35,9 @@ export const COLLECTIONS = {
     SCHOOL_CHECKOUTS: 'school_checkouts',
     OFFICE_SUPPLY_ITEMS: 'office_supply_items',
     OFFICE_SUPPLY_TRANSACTIONS: 'office_supply_transactions',
+    PACKAGES: 'packages',
+    PACKAGE_RECIPIENTS: 'package_recipients',
+    PACKAGE_NOTIFICATIONS: 'package_notifications',
 } as const;
 
 // Existing Type definitions
@@ -96,7 +102,7 @@ export interface UserSettings extends Models.Document {
     role?: string;
     notifications_enabled?: boolean;
     last_login?: string;
-    last_section?: 'procurement' | 'inventory';
+    last_section?: 'procurement' | 'inventory' | 'packages';
 }
 
 // New Type definitions for Procurement System

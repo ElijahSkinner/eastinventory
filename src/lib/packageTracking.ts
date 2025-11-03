@@ -1,15 +1,6 @@
 // src/lib/packageTracking.ts
 import { Models } from 'appwrite';
 
-export interface PackageRecipient extends Models.Document {
-    name: string;
-    email: string;
-    department?: string;
-    user_id?: string;
-    active: boolean;
-    notification_preference: 'email' | 'app' | 'both';
-}
-
 export interface Package extends Models.Document {
     forwarded_from?: string; // Previous recipient
     forwarding_chain?: string[]; // Array of previous recipients
@@ -21,9 +12,6 @@ export interface Package extends Models.Document {
     carrier?: string;
     number_of_packages: number;
     received_date: string; // ISO datetime
-    addressed_to: string; // Display name
-    addressed_to_type: 'staff' | 'custom';
-    addressed_to_id?: string; // ID from package_recipients if staff
     location: 'Reception' | 'Receiving Office' | 'With Addressee';
     status: 'pending_confirmation' | 'confirmed' | 'completed';
     received_by: string; // Name of front desk person
@@ -33,8 +21,42 @@ export interface Package extends Models.Document {
     notification_sent: boolean;
     reminder_sent: boolean;
     reminder_count: number;
+    addressed_to: string; // Display name
+    addressed_to_type: 'user' | 'team' | 'custom' | 'unclaimed'; // CHANGED
+    addressed_to_id?: string; // Now Appwrite User ID or Team ID
+
+}
+export async function loadAllUsers() {
+    try {
+        const response = await users.list();
+        return response.users;
+    } catch (error) {
+        console.error('Error loading users:', error);
+        return [];
+    }
 }
 
+export async function loadAllTeams() {
+    try {
+        const response = await teams.list();
+        return response.teams;
+    } catch (error) {
+        console.error('Error loading teams:', error);
+        return [];
+    }
+}
+
+export async function getUserTeams(userId: string) {
+    try {
+        const response = await teams.list();
+        // Filter to teams where user is a member
+        // Note: You'll need to check memberships
+        return response.teams;
+    } catch (error) {
+        console.error('Error getting user teams:', error);
+        return [];
+    }
+}
 export interface PackageNotification extends Models.Document {
     package_id: string;
     recipient_id: string;
